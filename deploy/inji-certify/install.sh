@@ -6,7 +6,7 @@ if [ $# -ge 1 ]; then
   export KUBECONFIG=$1
 fi
 
-SOFTHSM_NS=inji-certify
+SOFTHSM_NS=softhsm
 SOFTHSM_CHART_VERSION=1.3.0
 
 echo "Create $SOFTHSM_NS namespace"
@@ -35,7 +35,7 @@ function installing_inji-certify() {
   $COPY_UTIL configmap softhsm-certify-share softhsm $NS
 
   echo "Copy secrets"
-  ../copy_cm_func.sh secret softhsm-certify $NS config-server
+  ../copy_cm_func.sh secret softhsm-certify softhsm config-server
 
   # Prompt until valid usecase is chosen
   while true; do
