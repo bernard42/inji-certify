@@ -141,14 +141,16 @@ public class CredentialConfigControllerTest {
         CredentialConfigResponse response = new CredentialConfigResponse();
         response.setId("farmer-credential-config-001");
         response.setStatus("active");
-        ArgumentCaptor<CredentialConfigurationDTO> captor = ArgumentCaptor.forClass(CredentialConfigurationDTO.class);
-        Mockito.when(credentialConfigurationService.addCredentialConfiguration(captor.capture())).thenReturn(response);
+        Mockito.when(credentialConfigurationService.addCredentialConfiguration(Mockito.any(CredentialConfigurationDTO.class)))
+                .thenReturn(response);
 
         mockMvc.perform(post("/credential-configurations")
                         .content(objectMapper.writeValueAsBytes(credentialConfigurationDTO))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isCreated());
 
+        ArgumentCaptor<CredentialConfigurationDTO> captor = ArgumentCaptor.forClass(CredentialConfigurationDTO.class);
+        Mockito.verify(credentialConfigurationService).addCredentialConfiguration(captor.capture());
         CredentialConfigurationDTO received = captor.getValue();
         Assert.assertEquals(List.of("did:jwk"), received.getCryptographicBindingMethodsSupported());
         Assert.assertEquals(List.of("EdDSA"), received.getCredentialSigningAlgValuesSupported());
