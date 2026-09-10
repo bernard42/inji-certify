@@ -382,6 +382,26 @@ public class CredentialConfigMetadataAttributesTest {
     }
 
     /**
+     * Omitting the attribute must not be a way round the COSE check: the algorithms derived from the
+     * deployment's own declaration are what gets stored, and for mso_mdoc they have to convert too.
+     */
+    @Test
+    public void addMsoMdocWithSigningAlgsOmittedAndSuiteDeclaringNoCoseEquivalent_IsRejected() {
+        LinkedHashMap<String, List<String>> signingAlgs = new LinkedHashMap<>();
+        signingAlgs.put("Ed25519Signature2020", List.of("EdDSA", "PS256"));
+        ReflectionTestUtils.setField(credentialConfigurationService, "credentialSigningAlgValuesSupportedMap", signingAlgs);
+        when(credentialConfigMapper.toEntity(any(CredentialConfigurationDTO.class))).thenReturn(msoMdocEntity());
+
+        CredentialConfigValidationException exception = assertThrows(CredentialConfigValidationException.class,
+                () -> credentialConfigurationService.addCredentialConfiguration(msoMdocRequest()));
+
+        Assert.assertEquals(ErrorConstants.UNSUPPORTED_CREDENTIAL_SIGNING_ALG,
+                exception.getErrors().getFirst().getErrorCode());
+        Assert.assertTrue(exception.getErrors().getFirst().getErrorMessage().contains("PS256"));
+        verify(credentialConfigRepository, never()).save(any(CredentialConfig.class));
+    }
+
+    /**
      * The COSE restriction applies to mso_mdoc alone; every other format keeps the crypto suite's own
      * declared algorithms.
      */
@@ -707,6 +727,29 @@ public class CredentialConfigMetadataAttributesTest {
         Assert.assertEquals(List.of("EdDSA"), supported.getCredentialSigningAlgValuesSupported());
         Assert.assertEquals(List.of("did:web"), supported.getCryptographicBindingMethodsSupported());
         Assert.assertEquals(Map.of("jwt", Map.of(PROOF_SIGNING_ALGS, List.of("EdDSA"))), supported.getProofTypesSupported());
+    }
+
+    /**
+     * A legacy mso_mdoc row stores the crypto suite name, which still expands to whatever the deployment
+     * declares for it. Writes reject an algorithm with no COSE equivalent, so a row that still resolves to
+     * one is a stored value that has to be corrected: metadata generation fails rather than advertising
+     * something the format cannot carry.
+     */
+    @Test
+    public void metadata_ForLegacyMsoMdocRowExpandingToUnmappableAlg_Fails() {
+        LinkedHashMap<String, List<String>> signingAlgs = new LinkedHashMap<>();
+        signingAlgs.put("Ed25519Signature2020", List.of("EdDSA", "PS256"));
+        ReflectionTestUtils.setField(credentialConfigurationService, "credentialSigningAlgValuesSupportedMap", signingAlgs);
+        CredentialConfig legacy = msoMdocEntity();
+        legacy.setCredentialSigningAlgValuesSupported(List.of("Ed25519Signature2020"));
+
+        when(credentialConfigRepository.findAll()).thenReturn(List.of(legacy));
+        when(credentialConfigMapper.toDto(legacy)).thenReturn(msoMdocRequest());
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> credentialConfigurationService.fetchCredentialIssuerMetadata());
+
+        Assert.assertTrue(exception.getMessage().contains("PS256"));
     }
 
     /**

@@ -54,29 +54,14 @@ public class CredentialConfigMetadataValidator {
         }
     }
 
-    public static void validateSigningAlgs(List<String> requested, String credentialFormat,
-                                           String signatureCryptoSuite,
+    public static void validateSigningAlgs(List<String> requested, String signatureCryptoSuite,
                                            Map<String, List<String>> declaredSigningAlgsByCryptoSuite,
                                            Map<String, List<List<String>>> keyAliasMapper,
-                                           Set<String> coseSigningAlgs,
                                            List<Error> errors) {
         if (requested.isEmpty()) {
             errors.add(buildError(ErrorConstants.INVALID_REQUEST,
                     "credentialSigningAlgValuesSupported was provided but is empty."));
             return;
-        }
-
-        // An mso_mdoc credential is advertised with COSE algorithm identifiers, so a value with no COSE
-        // equivalent is rejected here rather than failing later when the issuer metadata is built.
-        if (VCFormats.MSO_MDOC.equals(credentialFormat)) {
-            for (String signingAlg : requested) {
-                if (!coseSigningAlgs.contains(signingAlg)) {
-                    errors.add(buildError(ErrorConstants.UNSUPPORTED_CREDENTIAL_SIGNING_ALG,
-                            "The credential signing algorithm " + signingAlg + " has no COSE equivalent and cannot be used "
-                                    + "with the credential format " + VCFormats.MSO_MDOC + ". The supported values are: "
-                                    + coseSigningAlgs));
-                }
-            }
         }
 
         if (signatureCryptoSuite == null) {
@@ -104,6 +89,28 @@ public class CredentialConfigMetadataValidator {
                 errors.add(buildError(ErrorConstants.UNSUPPORTED_CREDENTIAL_SIGNING_ALG,
                         "The credential signing algorithm " + signingAlg + " is not supported for the crypto suite "
                                 + signatureCryptoSuite + ". The supported values are: " + declared));
+            }
+        }
+    }
+
+    /**
+     * An mso_mdoc credential is advertised with COSE algorithm identifiers, so an algorithm with no COSE
+     * equivalent cannot be used for that format. This is the format's own constraint rather than the
+     * deployment's, so it applies to the algorithms a request selects and equally to the ones derived
+     * from configuration when the request selects none - both end up in the issuer metadata.
+     */
+    public static void validateCoseSigningAlgs(List<String> effective, String credentialFormat,
+                                               Set<String> coseSigningAlgs, List<Error> errors) {
+        if (!VCFormats.MSO_MDOC.equals(credentialFormat)) {
+            return;
+        }
+
+        for (String signingAlg : effective) {
+            if (!coseSigningAlgs.contains(signingAlg)) {
+                errors.add(buildError(ErrorConstants.UNSUPPORTED_CREDENTIAL_SIGNING_ALG,
+                        "The credential signing algorithm " + signingAlg + " has no COSE equivalent and cannot be used "
+                                + "with the credential format " + VCFormats.MSO_MDOC + ". The supported values are: "
+                                + coseSigningAlgs));
             }
         }
     }

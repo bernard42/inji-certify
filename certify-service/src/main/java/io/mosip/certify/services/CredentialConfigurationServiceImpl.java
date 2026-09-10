@@ -259,6 +259,13 @@ public class CredentialConfigurationServiceImpl implements CredentialConfigurati
         Map<String, Object> providedProofTypes =
                 providedValue(requestedProofTypes, storedProofTypes, retainsProofTypes);
 
+        // What this configuration will actually advertise: the request's selection, or the algorithms
+        // derived from configuration when it made none.
+        List<String> effectiveSigningAlgs = providedSigningAlgs != null
+                ? providedSigningAlgs
+                : CredentialConfigMetadataResolver.deriveSigningAlgs(credentialConfig.getSignatureCryptoSuite(),
+                        credentialConfig.getSignatureAlgo(), credentialSigningAlgValuesSupportedMap);
+
         List<io.mosip.certify.core.dto.Error> errors = new ArrayList<>();
         if (providedBindingMethods != null) {
             CredentialConfigMetadataValidator.validateBindingMethods(providedBindingMethods,
@@ -266,9 +273,14 @@ public class CredentialConfigurationServiceImpl implements CredentialConfigurati
         }
         if (providedSigningAlgs != null) {
             CredentialConfigMetadataValidator.validateSigningAlgs(providedSigningAlgs,
-                    credentialConfig.getCredentialFormat(), credentialConfig.getSignatureCryptoSuite(),
-                    credentialSigningAlgValuesSupportedMap, keyAliasMapper, COSE_ALGORITHM_INTEGER_MAP.keySet(), errors);
+                    credentialConfig.getSignatureCryptoSuite(), credentialSigningAlgValuesSupportedMap,
+                    keyAliasMapper, errors);
         }
+        // A derived value is not checked against configuration - that is the allow-list - but the COSE
+        // constraint belongs to the mso_mdoc format, which configuration can violate, so it is checked
+        // whoever chose the algorithms.
+        CredentialConfigMetadataValidator.validateCoseSigningAlgs(effectiveSigningAlgs,
+                credentialConfig.getCredentialFormat(), COSE_ALGORITHM_INTEGER_MAP.keySet(), errors);
         if (providedProofTypes != null) {
             CredentialConfigMetadataValidator.validateProofTypes(providedProofTypes, proofTypesSupported, errors);
         }
@@ -283,10 +295,7 @@ public class CredentialConfigurationServiceImpl implements CredentialConfigurati
                 : CredentialConfigMetadataResolver.deriveBindingMethods(credentialConfig.getCredentialFormat(),
                         cryptographicBindingMethodsSupportedMap));
 
-        credentialConfig.setCredentialSigningAlgValuesSupported(providedSigningAlgs != null
-                ? providedSigningAlgs
-                : CredentialConfigMetadataResolver.deriveSigningAlgs(credentialConfig.getSignatureCryptoSuite(),
-                        credentialConfig.getSignatureAlgo(), credentialSigningAlgValuesSupportedMap));
+        credentialConfig.setCredentialSigningAlgValuesSupported(effectiveSigningAlgs);
 
         // The derived default goes through the same resolution as a requested value, so a proof type the
         // deployment declares without any signing algorithm cannot be stored by omitting the attribute.
