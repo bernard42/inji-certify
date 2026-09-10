@@ -1642,17 +1642,20 @@ components:
             type: string
         credentialSigningAlgValuesSupported:
           type: array
-          description: 'Optional. Signing algorithms advertised for this credential configuration. Where signatureCryptoSuite is present every value must be declared for that suite in mosip.certify.credential-config.credential-signing-alg-values-supported; where the format carries no crypto suite, such as dc+sd-jwt, every value must be an algorithm the deployment holds a signing key for in mosip.certify.signature-algo.key-alias-mapper. An undeclared value is rejected with unsupported_credential_signing_alg. Omitted on Add, the algorithms declared for the crypto suite apply, or the configuration''s own signatureAlgo where there is no suite; omitted on Update, the stored value is retained. Always returned by the Get response. An empty array is rejected.'
+          description: 'Optional. Signing algorithms advertised for this credential configuration. Where signatureCryptoSuite is present every value must be declared for that suite in mosip.certify.credential-config.credential-signing-alg-values-supported; where the format carries no crypto suite, such as dc+sd-jwt, every value must be an algorithm the deployment holds a signing key for in mosip.certify.signature-algo.key-alias-mapper. For the mso_mdoc format every value must additionally have a COSE equivalent (ES256, EdDSA, ES256K or RS256), since that format advertises COSE algorithm identifiers. An undeclared value is rejected with unsupported_credential_signing_alg. Omitted on Add, the algorithms declared for the crypto suite apply, or the configuration''s own signatureAlgo where there is no suite; omitted on Update, the stored value is retained. Always returned by the Get response. An empty array is rejected.'
           items:
             type: string
         proofTypesSupported:
           type: object
-          description: 'Optional. Proof types advertised for this credential configuration. Each key must be a proof type declared in mosip.certify.credential-config.proof-types-supported, otherwise the request is rejected with unsupported_proof_type. Omitted on Add, all declared proof types apply; omitted on Update, the stored value is retained. Always returned by the Get response. An empty object is rejected.'
+          description: 'Optional. Proof types advertised for this credential configuration. Each key must be a proof type declared in mosip.certify.credential-config.proof-types-supported, otherwise the request is rejected with unsupported_proof_type. A proof type may be named with null or with an empty object, in which case every algorithm declared for it applies. Omitted on Add, all declared proof types apply; omitted on Update, the stored value is retained. Always returned by the Get response. An empty object is rejected.'
           additionalProperties:
-            $ref: '#/components/schemas/ProofTypeSupportedDTO'
+            nullable: true
+            allOf:
+              - $ref: '#/components/schemas/ProofTypeSupportedDTO'
     ProofTypeSupportedDTO:
       type: object
       description: 'Narrows a single proof type. proof_signing_alg_values_supported is the only recognised attribute; any other attribute is rejected with invalid_request.'
+      additionalProperties: false
       properties:
         proof_signing_alg_values_supported:
           type: array

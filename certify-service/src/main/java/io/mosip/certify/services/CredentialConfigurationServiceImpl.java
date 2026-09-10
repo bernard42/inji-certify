@@ -266,7 +266,8 @@ public class CredentialConfigurationServiceImpl implements CredentialConfigurati
         }
         if (providedSigningAlgs != null) {
             CredentialConfigMetadataValidator.validateSigningAlgs(providedSigningAlgs,
-                    credentialConfig.getSignatureCryptoSuite(), credentialSigningAlgValuesSupportedMap, keyAliasMapper, errors);
+                    credentialConfig.getCredentialFormat(), credentialConfig.getSignatureCryptoSuite(),
+                    credentialSigningAlgValuesSupportedMap, keyAliasMapper, COSE_ALGORITHM_INTEGER_MAP.keySet(), errors);
         }
         if (providedProofTypes != null) {
             CredentialConfigMetadataValidator.validateProofTypes(providedProofTypes, proofTypesSupported, errors);
@@ -287,9 +288,10 @@ public class CredentialConfigurationServiceImpl implements CredentialConfigurati
                 : CredentialConfigMetadataResolver.deriveSigningAlgs(credentialConfig.getSignatureCryptoSuite(),
                         credentialConfig.getSignatureAlgo(), credentialSigningAlgValuesSupportedMap));
 
-        credentialConfig.setProofTypesSupported(providedProofTypes != null
-                ? CredentialConfigMetadataResolver.resolveProofTypes(providedProofTypes, proofTypesSupported)
-                : new LinkedHashMap<>(proofTypesSupported));
+        // The derived default goes through the same resolution as a requested value, so a proof type the
+        // deployment declares without any signing algorithm cannot be stored by omitting the attribute.
+        credentialConfig.setProofTypesSupported(CredentialConfigMetadataResolver.resolveProofTypes(
+                providedProofTypes != null ? providedProofTypes : proofTypesSupported, proofTypesSupported));
     }
 
     /**
@@ -315,9 +317,9 @@ public class CredentialConfigurationServiceImpl implements CredentialConfigurati
         credentialConfigurationDTO.setCredentialSigningAlgValuesSupported(
                 CredentialConfigMetadataResolver.resolveStoredSigningAlgs(credentialConfig, credentialSigningAlgValuesSupportedMap));
         Map<String, Object> storedProofTypes = credentialConfigurationDTO.getProofTypesSupported();
-        credentialConfigurationDTO.setProofTypesSupported(storedProofTypes == null || storedProofTypes.isEmpty()
-                ? new LinkedHashMap<>(proofTypesSupported)
-                : CredentialConfigMetadataResolver.resolveProofTypes(storedProofTypes, proofTypesSupported));
+        credentialConfigurationDTO.setProofTypesSupported(CredentialConfigMetadataResolver.resolveProofTypes(
+                storedProofTypes == null || storedProofTypes.isEmpty() ? proofTypesSupported : storedProofTypes,
+                proofTypesSupported));
         return credentialConfigurationDTO;
     }
 

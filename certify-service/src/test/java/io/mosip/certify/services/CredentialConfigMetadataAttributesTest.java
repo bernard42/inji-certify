@@ -20,7 +20,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -52,8 +51,6 @@ public class CredentialConfigMetadataAttributesTest {
 
     @Before
     public void setup() {
-        MockitoAnnotations.openMocks(this);
-
         LinkedHashMap<String, List<String>> bindingMethods = new LinkedHashMap<>();
         bindingMethods.put("ldp_vc", List.of("did:jwk", "did:web"));
         bindingMethods.put("mso_mdoc", List.of("cose_key"));
@@ -125,6 +122,28 @@ public class CredentialConfigMetadataAttributesTest {
         entity.setCredentialFormat("dc+sd-jwt");
         entity.setSdJwtVct("test-vct");
         entity.setSignatureAlgo("ES256");
+        return entity;
+    }
+
+    private CredentialConfigurationDTO msoMdocRequest() {
+        CredentialConfigurationDTO dto = new CredentialConfigurationDTO();
+        dto.setCredentialConfigKeyId("test-mso-mdoc");
+        dto.setMetaDataDisplay(List.of(new MetaDataDisplayDTO()));
+        dto.setVcTemplate("test_template");
+        dto.setCredentialFormat("mso_mdoc");
+        dto.setDocType("org.iso.18013.5.1.mDL");
+        dto.setSignatureCryptoSuite("Ed25519Signature2020");
+        return dto;
+    }
+
+    private CredentialConfig msoMdocEntity() {
+        CredentialConfig entity = new CredentialConfig();
+        entity.setCredentialConfigKeyId("test-mso-mdoc");
+        entity.setStatus("active");
+        entity.setCredentialFormat("mso_mdoc");
+        entity.setDocType("org.iso.18013.5.1.mDL");
+        entity.setSignatureCryptoSuite("Ed25519Signature2020");
+        entity.setSignatureAlgo("EdDSA");
         return entity;
     }
 
@@ -336,6 +355,88 @@ public class CredentialConfigMetadataAttributesTest {
         Assert.assertEquals(ErrorConstants.UNSUPPORTED_CREDENTIAL_SIGNING_ALG,
                 exception.getErrors().getFirst().getErrorCode());
         Assert.assertTrue(exception.getErrors().getFirst().getErrorMessage().contains("No signing key is available"));
+        verify(credentialConfigRepository, never()).save(any(CredentialConfig.class));
+    }
+
+    /**
+     * An mso_mdoc credential is advertised with COSE algorithm identifiers, so an algorithm the
+     * deployment declares for the crypto suite but that has no COSE equivalent is rejected on write
+     * instead of failing when the issuer metadata is built.
+     */
+    @Test
+    public void addMsoMdocWithAlgorithmHavingNoCoseEquivalent_IsRejected() {
+        LinkedHashMap<String, List<String>> signingAlgs = new LinkedHashMap<>();
+        signingAlgs.put("Ed25519Signature2020", List.of("EdDSA", "PS256"));
+        ReflectionTestUtils.setField(credentialConfigurationService, "credentialSigningAlgValuesSupportedMap", signingAlgs);
+        when(credentialConfigMapper.toEntity(any(CredentialConfigurationDTO.class))).thenReturn(msoMdocEntity());
+        CredentialConfigurationDTO request = msoMdocRequest();
+        request.setCredentialSigningAlgValuesSupported(List.of("PS256"));
+
+        CredentialConfigValidationException exception = assertThrows(CredentialConfigValidationException.class,
+                () -> credentialConfigurationService.addCredentialConfiguration(request));
+
+        Assert.assertEquals(ErrorConstants.UNSUPPORTED_CREDENTIAL_SIGNING_ALG,
+                exception.getErrors().getFirst().getErrorCode());
+        Assert.assertTrue(exception.getErrors().getFirst().getErrorMessage().contains("no COSE equivalent"));
+        verify(credentialConfigRepository, never()).save(any(CredentialConfig.class));
+    }
+
+    /**
+     * The COSE restriction applies to mso_mdoc alone; every other format keeps the crypto suite's own
+     * declared algorithms.
+     */
+    @Test
+    public void addWithAlgorithmHavingNoCoseEquivalent_IsAcceptedForOtherFormats() {
+        LinkedHashMap<String, List<String>> signingAlgs = new LinkedHashMap<>();
+        signingAlgs.put("Ed25519Signature2020", List.of("EdDSA", "PS256"));
+        ReflectionTestUtils.setField(credentialConfigurationService, "credentialSigningAlgValuesSupportedMap", signingAlgs);
+        CredentialConfig entity = ldpVcEntity();
+        when(credentialConfigMapper.toEntity(any(CredentialConfigurationDTO.class))).thenReturn(entity);
+        when(credentialConfigRepository.save(any(CredentialConfig.class))).thenReturn(entity);
+        CredentialConfigurationDTO request = ldpVcRequest();
+        request.setCredentialSigningAlgValuesSupported(List.of("EdDSA", "PS256"));
+
+        credentialConfigurationService.addCredentialConfiguration(request);
+
+        Assert.assertEquals(List.of("EdDSA", "PS256"), entity.getCredentialSigningAlgValuesSupported());
+    }
+
+    /**
+     * A proof type the deployment declares with no signing algorithms would be stored, and advertised,
+     * carrying none - which OpenID4VCI does not allow and which makes JwtProofValidator reject every
+     * proof. The misconfiguration is reported instead of being persisted.
+     */
+    @Test
+    public void addWithProofTypeDeclaringNoSigningAlgs_IsRejected() {
+        LinkedHashMap<String, Object> proofTypes = new LinkedHashMap<>();
+        proofTypes.put("jwt", Map.of(PROOF_SIGNING_ALGS, List.of()));
+        ReflectionTestUtils.setField(credentialConfigurationService, "proofTypesSupported", proofTypes);
+        when(credentialConfigMapper.toEntity(any(CredentialConfigurationDTO.class))).thenReturn(ldpVcEntity());
+        CredentialConfigurationDTO request = ldpVcRequest();
+        request.setProofTypesSupported(Map.of("jwt", Map.of()));
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> credentialConfigurationService.addCredentialConfiguration(request));
+
+        Assert.assertTrue(exception.getMessage().contains(PROOF_SIGNING_ALGS));
+        Assert.assertTrue(exception.getMessage().contains("jwt"));
+        verify(credentialConfigRepository, never()).save(any(CredentialConfig.class));
+    }
+
+    /**
+     * Omitting the attribute must not be a way round that check: the derived default is resolved the
+     * same way a requested value is.
+     */
+    @Test
+    public void addWithProofTypesOmittedAndDeclaredWithoutSigningAlgs_IsRejected() {
+        LinkedHashMap<String, Object> proofTypes = new LinkedHashMap<>();
+        proofTypes.put("jwt", Map.of(PROOF_SIGNING_ALGS, List.of()));
+        ReflectionTestUtils.setField(credentialConfigurationService, "proofTypesSupported", proofTypes);
+        when(credentialConfigMapper.toEntity(any(CredentialConfigurationDTO.class))).thenReturn(ldpVcEntity());
+
+        assertThrows(IllegalStateException.class,
+                () -> credentialConfigurationService.addCredentialConfiguration(ldpVcRequest()));
+
         verify(credentialConfigRepository, never()).save(any(CredentialConfig.class));
     }
 
