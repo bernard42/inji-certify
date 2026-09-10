@@ -7,11 +7,13 @@ package io.mosip.certify.validators.credentialconfigvalidators;
 
 import io.mosip.certify.core.constants.Constants;
 import io.mosip.certify.core.constants.ErrorConstants;
+import io.mosip.certify.core.constants.VCFormats;
 import io.mosip.certify.core.dto.Error;
 import io.mosip.certify.utils.CredentialConfigMetadataResolver;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Validates the three per-configuration metadata attributes — cryptographic_binding_methods_supported,
@@ -52,14 +54,29 @@ public class CredentialConfigMetadataValidator {
         }
     }
 
-    public static void validateSigningAlgs(List<String> requested, String signatureCryptoSuite,
+    public static void validateSigningAlgs(List<String> requested, String credentialFormat,
+                                           String signatureCryptoSuite,
                                            Map<String, List<String>> declaredSigningAlgsByCryptoSuite,
                                            Map<String, List<List<String>>> keyAliasMapper,
+                                           Set<String> coseSigningAlgs,
                                            List<Error> errors) {
         if (requested.isEmpty()) {
             errors.add(buildError(ErrorConstants.INVALID_REQUEST,
                     "credentialSigningAlgValuesSupported was provided but is empty."));
             return;
+        }
+
+        // An mso_mdoc credential is advertised with COSE algorithm identifiers, so a value with no COSE
+        // equivalent is rejected here rather than failing later when the issuer metadata is built.
+        if (VCFormats.MSO_MDOC.equals(credentialFormat)) {
+            for (String signingAlg : requested) {
+                if (!coseSigningAlgs.contains(signingAlg)) {
+                    errors.add(buildError(ErrorConstants.UNSUPPORTED_CREDENTIAL_SIGNING_ALG,
+                            "The credential signing algorithm " + signingAlg + " has no COSE equivalent and cannot be used "
+                                    + "with the credential format " + VCFormats.MSO_MDOC + ". The supported values are: "
+                                    + coseSigningAlgs));
+                }
+            }
         }
 
         if (signatureCryptoSuite == null) {

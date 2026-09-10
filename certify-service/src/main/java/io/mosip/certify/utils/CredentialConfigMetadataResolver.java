@@ -93,6 +93,13 @@ public class CredentialConfigMetadataResolver {
      * Storing the bare proof type instead would publish it with no algorithms, which OpenID4VCI does not
      * allow, and JwtProofValidator reads a missing list as an empty one and rejects every proof, so the
      * configuration would silently stop issuing.
+     * <p>
+     * A proof type left with no algorithms at all - the deployment declares none for it, so there is
+     * nothing to fill in with - has exactly that effect, so it is rejected here rather than persisted or
+     * advertised. That is a deployment misconfiguration in
+     * mosip.certify.credential-config.proof-types-supported, not something a request can correct.
+     *
+     * @throws IllegalStateException when a proof type resolves to an empty list of signing algorithms
      */
     @SuppressWarnings("unchecked")
     public static Map<String, Object> resolveProofTypes(Map<String, Object> proofTypes,
@@ -105,6 +112,13 @@ public class CredentialConfigMetadataResolver {
                     : new LinkedHashMap<>();
             detailMap.computeIfAbsent(Constants.PROOF_SIGNING_ALG_VALUES_SUPPORTED,
                     attribute -> declaredProofSigningAlgs(declaredProofTypes, entry.getKey()));
+
+            Object signingAlgs = detailMap.get(Constants.PROOF_SIGNING_ALG_VALUES_SUPPORTED);
+            if (!(signingAlgs instanceof Collection) || ((Collection<?>) signingAlgs).isEmpty()) {
+                throw new IllegalStateException("No " + Constants.PROOF_SIGNING_ALG_VALUES_SUPPORTED
+                        + " is available for the proof type " + entry.getKey()
+                        + ". Declare it for that proof type in mosip.certify.credential-config.proof-types-supported.");
+            }
             resolved.put(entry.getKey(), detailMap);
         }
         return resolved;
