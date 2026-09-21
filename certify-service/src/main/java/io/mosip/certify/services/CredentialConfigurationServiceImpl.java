@@ -96,7 +96,7 @@ public class CredentialConfigurationServiceImpl implements CredentialConfigurati
         validateCredentialConfiguration(credentialConfigurationDTO, true);
 
         CredentialConfig credentialConfig = credentialConfigMapper.toEntity(credentialConfigurationDTO);
-        applyCredentialConfigMetadataAttributes(credentialConfigurationDTO, credentialConfig, true);
+        validateAndApplyCredentialConfigMetadataAttributes(credentialConfigurationDTO, credentialConfig, true);
         return saveCredentialConfiguration(credentialConfig);
     }
 
@@ -229,7 +229,7 @@ public class CredentialConfigurationServiceImpl implements CredentialConfigurati
      * Every failure across all three attributes is collected before anything is stored, so the caller
      * sees the whole payload's problems at once and nothing is partially saved.
      */
-    private void applyCredentialConfigMetadataAttributes(CredentialConfigurationDTO request, CredentialConfig credentialConfig, boolean isAdd) {
+    private void validateAndApplyCredentialConfigMetadataAttributes(CredentialConfigurationDTO request, CredentialConfig credentialConfig, boolean isAdd) {
         List<String> requestedBindingMethods = request.getCryptographicBindingMethodsSupported();
         List<String> requestedSigningAlgs = request.getCredentialSigningAlgValuesSupported();
         Map<String, Object> requestedProofTypes = request.getProofTypesSupported();
@@ -369,7 +369,7 @@ public class CredentialConfigurationServiceImpl implements CredentialConfigurati
 
         validateCredentialConfiguration(credentialConfigMapper.toDto(credentialConfig), false);
 
-        applyCredentialConfigMetadataAttributes(credentialConfigurationDTO, credentialConfig, false);
+        validateAndApplyCredentialConfigMetadataAttributes(credentialConfigurationDTO, credentialConfig, false);
 
         CredentialConfig savedConfig = credentialConfigRepository.save(credentialConfig);
         log.info("Updated credential configuration: {}", savedConfig.getConfigId());
