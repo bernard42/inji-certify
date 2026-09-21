@@ -1661,6 +1661,7 @@ components:
       properties:
         proof_signing_alg_values_supported:
           type: array
+          minItems: 1
           description: 'Optional. Must be a subset of the algorithms declared for this proof type in mosip.certify.credential-config.proof-types-supported; a value outside that set is rejected with unsupported_proof_signing_alg. Omitted, every declared algorithm for the proof type applies. An empty array is rejected.'
           items:
             type: string

@@ -429,6 +429,19 @@ public class CredentialConfigurationServiceImpl implements CredentialConfigurati
                 algs = null;
             }
 
+            // A configuration written before these attributes were stored carries neither, so the same
+            // defaults the Get API resolves are applied here too - what a wallet reads and what an
+            // issuer reads back stay the same.
+            if (dto.getCryptographicBindingMethodsSupported() == null) {
+                dto.setCryptographicBindingMethodsSupported(
+                        CredentialConfigMetadataResolver.deriveBindingMethods(credentialConfig.getCredentialFormat(),
+                                cryptographicBindingMethodsSupportedMap));
+            }
+            Map<String, Object> storedProofTypes = credentialConfig.getProofTypesSupported();
+            dto.setProofTypesSupported(CredentialConfigMetadataResolver.resolveProofTypes(
+                    storedProofTypes == null || storedProofTypes.isEmpty() ? proofTypesSupported : storedProofTypes,
+                    proofTypesSupported));
+
             if (VCFormats.MSO_MDOC.equals(credentialConfig.getCredentialFormat()) && algs != null) {
                 List<Object> coseAlgs = new ArrayList<>();
                 for (String alg : algs) {
