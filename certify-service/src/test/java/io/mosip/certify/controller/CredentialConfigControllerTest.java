@@ -1,6 +1,7 @@
 package io.mosip.certify.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.mosip.certify.core.constants.Constants;
 import io.mosip.certify.core.constants.ErrorConstants;
 import io.mosip.certify.core.dto.*;
 import io.mosip.certify.core.exception.CredentialConfigValidationException;
@@ -63,7 +64,7 @@ public class CredentialConfigControllerTest {
         credentialConfigurationDTO.setDisplayOrder(Arrays.asList("test1", "test2", "test3", "test4"));
         credentialConfigurationDTO.setScope("test_vc_ldp");
         credentialConfigurationDTO.setSignatureCryptoSuite("Ed25519Signature2020");
-        Map<String, Object> jwtValues = Map.of("proof_signing_alg_values_supported", Arrays.asList("RS256", "ES256"));
+        Map<String, Object> jwtValues = Map.of(Constants.PROOF_SIGNING_ALG_VALUES_SUPPORTED, Arrays.asList("RS256", "ES256"));
         Map<String, String> pluginConfigMap = new HashMap<>();
         pluginConfigMap.put("mosip.certify.mock.data-provider.test-one", "valueOne");
         pluginConfigMap.put("mosip.certify.mock.data-provider.test-two", "valueTwo");
@@ -136,7 +137,7 @@ public class CredentialConfigControllerTest {
         credentialConfigurationDTO.setCryptographicBindingMethodsSupported(List.of("did:jwk"));
         credentialConfigurationDTO.setCredentialSigningAlgValuesSupported(List.of("EdDSA"));
         credentialConfigurationDTO.setProofTypesSupported(
-                Map.of("jwt", Map.of("proof_signing_alg_values_supported", List.of("ES256"))));
+                Map.of("jwt", Map.of(Constants.PROOF_SIGNING_ALG_VALUES_SUPPORTED, List.of("ES256"))));
 
         CredentialConfigResponse response = new CredentialConfigResponse();
         response.setId("farmer-credential-config-001");
@@ -154,7 +155,7 @@ public class CredentialConfigControllerTest {
         CredentialConfigurationDTO received = captor.getValue();
         Assert.assertEquals(List.of("did:jwk"), received.getCryptographicBindingMethodsSupported());
         Assert.assertEquals(List.of("EdDSA"), received.getCredentialSigningAlgValuesSupported());
-        Assert.assertEquals(Map.of("jwt", Map.of("proof_signing_alg_values_supported", List.of("ES256"))),
+        Assert.assertEquals(Map.of("jwt", Map.of(Constants.PROOF_SIGNING_ALG_VALUES_SUPPORTED, List.of("ES256"))),
                 received.getProofTypesSupported());
     }
 
@@ -166,7 +167,7 @@ public class CredentialConfigControllerTest {
         credentialConfigurationDTO.setCryptographicBindingMethodsSupported(List.of("did:jwk", "did:key"));
         credentialConfigurationDTO.setCredentialSigningAlgValuesSupported(List.of("EdDSA"));
         credentialConfigurationDTO.setProofTypesSupported(
-                Map.of("jwt", Map.of("proof_signing_alg_values_supported", List.of("RS256", "ES256"))));
+                Map.of("jwt", Map.of(Constants.PROOF_SIGNING_ALG_VALUES_SUPPORTED, List.of("RS256", "ES256"))));
         Mockito.when(credentialConfigurationService.getCredentialConfigurationById(Mockito.anyString()))
                 .thenReturn(credentialConfigurationDTO);
 

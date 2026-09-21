@@ -5,6 +5,7 @@
  */
 package io.mosip.certify.services;
 
+import io.mosip.certify.core.constants.Constants;
 import io.mosip.certify.core.constants.ErrorConstants;
 import io.mosip.certify.core.dto.CredentialConfigurationDTO;
 import io.mosip.certify.core.dto.CredentialConfigurationSupportedDTO;
@@ -47,7 +48,7 @@ public class CredentialConfigMetadataAttributesTest {
     @InjectMocks
     private CredentialConfigurationServiceImpl credentialConfigurationService;
 
-    private static final String PROOF_SIGNING_ALGS = "proof_signing_alg_values_supported";
+    private static final String PROOF_SIGNING_ALGS = Constants.PROOF_SIGNING_ALG_VALUES_SUPPORTED;
 
     @Before
     public void setup() {
