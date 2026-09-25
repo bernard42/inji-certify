@@ -148,6 +148,7 @@ mvn clean install -Dgpg.skip=true
 2. Locate the `8. Get Credential` POST request inside the `4. VCI` → `Bearer` → `Issuance` folder
 3. Send the VC request and the response will be farmer credential json.
 4. Try verification with [Univerifier](https://univerifier.io)
+5. To issue with a DPoP-bound access token instead, switch to the [DPoP environment](../postman_collections/authorization_code_flow/data_provider_plugin/inji-certify-with-mock-identity-dpop.postman_environment.json) and run `4. VCI` → `DPoP`. This needs eSignet 1.8 or later; see [README-mock-identity-dpop.md](../postman_collections/authorization_code_flow/data_provider_plugin/README-mock-identity-dpop.md) and [DPoP Support](./DPoP_Support.md).
 
 
 ## Setting up Presentation During Issuance
