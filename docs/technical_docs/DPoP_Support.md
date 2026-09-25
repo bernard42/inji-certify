@@ -58,7 +58,7 @@ A problem with the access token itself (signature, expiry, issuer, audience) ans
 | `mosip.certify.dpop.allowed-algorithms` | `ES256,ES384,ES512,RS256,PS256,EdDSA` | Signature algorithms accepted on a proof, and advertised in `algs` |
 | `mosip.certify.dpop.proof-max-age` | `60` | How old a proof's `iat` may be, in seconds |
 | `mosip.certify.dpop.clock-skew` | `10` | Tolerance for wallet clock drift, applied on both sides of the window |
-| `mosip.certify.dpop.jti.expire.seconds` | `120` | How long a used `jti` is remembered. **Must be at least `proof-max-age` + `clock-skew`**, or a proof becomes replayable while it is still fresh |
+| `mosip.certify.dpop.jti.expire.seconds` | `120` | How long a used `jti` is remembered. **Must exceed `proof-max-age` + 2 × `clock-skew`**, since a proof with a future-dated `iat` stays fresh that long after first use; a shorter TTL lets it be replayed while still fresh |
 | `mosip.certify.domain.url` | — | Public base URL the `htu` claim is compared against. Must be an absolute URL with a scheme |
 
 ### Required cache: `dpopJti`
