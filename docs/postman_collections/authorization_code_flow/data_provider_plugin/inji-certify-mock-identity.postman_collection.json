@@ -829,7 +829,7 @@
                         "exec": [
                           "pm.test(\"Validate clientId\", function () {",
                           "    var jsonData = pm.response.json();",
-                          "    pm.expect(jsonData.response.clientId).to.eql(pm.collectionVariables.get(\"clientId\"));",
+                          "    pm.expect(jsonData.response.clientId).to.eql(pm.variables.get(\"clientId\"));",
                           "});",
                           "",
                           "pm.test(\"Validate status\", function () {",
@@ -6116,14 +6116,6 @@
       "value": "34789"
     },
     {
-      "key": "url",
-      "value": "http://localhost:8088/v1/idp"
-    },
-    {
-      "key": "url",
-      "value": ""
-    },
-    {
       "key": "code",
       "value": ""
     },
@@ -6141,14 +6133,6 @@
     },
     {
       "key": "wla_challenge",
-      "value": ""
-    },
-    {
-      "key": "client_secret",
-      "value": "JfoG3eLWLW7iSZDt"
-    },
-    {
-      "key": "client_secret",
       "value": ""
     },
     {
