@@ -87,11 +87,13 @@ public class CredentialConfigurationServiceImpl implements CredentialConfigurati
 
     private static final String CREDENTIAL_CONFIG_CACHE_NAME = "credentialConfig";
 
+    // The algorithms an mso_mdoc issuer may sign with. ISO 18013-5 allows ES256, ES384, ES512 and
+    // EdDSA for issuerAuth, so RS256 and ES256K are not listed. ES384 and ES512 are left out as well:
+    // the keymanager's COSE signing supports neither, and advertising them would promise credentials
+    // that cannot be issued.
     private static final Map<String, Integer> COSE_ALGORITHM_INTEGER_MAP = Map.of(
         JWSAlgorithm.ES256.getName(), COSEAlgorithms.ES256,
-        JWSAlgorithm.EdDSA.getName(), COSEAlgorithms.EdDSA,        
-        JWSAlgorithm.ES256K.getName(), COSEAlgorithms.ES256K,
-        JWSAlgorithm.RS256.getName(), COSEAlgorithms.RS256 
+        JWSAlgorithm.EdDSA.getName(), COSEAlgorithms.EdDSA
     );
 
     @Override

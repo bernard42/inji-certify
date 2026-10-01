@@ -383,6 +383,31 @@ public class CredentialConfigMetadataAttributesTest {
     }
 
     /**
+     * ISO 18013-5 allows ES256, ES384, ES512 and EdDSA for an mdoc's issuerAuth. RS256 and ES256K have
+     * COSE identifiers but are outside that list, so an mso_mdoc configuration may not use them.
+     */
+    @Test
+    public void addMsoMdocWithAlgorithmOutsideIso18013_5_IsRejected() {
+        LinkedHashMap<String, List<String>> signingAlgs = new LinkedHashMap<>();
+        signingAlgs.put("Ed25519Signature2020", List.of("EdDSA", "RS256", "ES256K"));
+        ReflectionTestUtils.setField(credentialConfigurationService, "credentialSigningAlgValuesSupportedMap", signingAlgs);
+        when(credentialConfigMapper.toEntity(any(CredentialConfigurationDTO.class))).thenReturn(msoMdocEntity());
+
+        for (String alg : List.of("RS256", "ES256K")) {
+            CredentialConfigurationDTO request = msoMdocRequest();
+            request.setCredentialSigningAlgValuesSupported(List.of(alg));
+
+            CredentialConfigValidationException exception = assertThrows(CredentialConfigValidationException.class,
+                    () -> credentialConfigurationService.addCredentialConfiguration(request));
+
+            Assert.assertEquals(ErrorConstants.UNSUPPORTED_CREDENTIAL_SIGNING_ALG,
+                    exception.getErrors().getFirst().getErrorCode());
+            Assert.assertTrue(exception.getErrors().getFirst().getErrorMessage().contains(alg));
+        }
+        verify(credentialConfigRepository, never()).save(any(CredentialConfig.class));
+    }
+
+    /**
      * Omitting the attribute must not be a way round the COSE check: the algorithms derived from the
      * deployment's own declaration are what gets stored, and for mso_mdoc they have to convert too.
      */
