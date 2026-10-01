@@ -1,6 +1,7 @@
 package io.mosip.certify.filter;
 
 import io.mosip.certify.core.constants.Constants;
+import io.mosip.certify.core.constants.ErrorConstants;
 import io.mosip.certify.core.dto.ParsedAccessToken;
 import io.mosip.certify.dpop.DpopProofValidator;
 import io.mosip.certify.core.util.CommonUtil;
@@ -296,6 +297,9 @@ class AccessTokenValidationFilterTest {
         verify(parsedAccessToken).setActive(false);
         assertEquals(AccessTokenValidationFilter.ERROR_TOKEN_REQUIRES_DPOP,
                 request.getAttribute(Constants.AUTH_ERROR_ATTRIBUTE));
+        // No proof took part, so the token error applies, not the proof error.
+        assertEquals(ErrorConstants.INVALID_AUTH_TOKEN,
+                request.getAttribute(Constants.AUTH_ERROR_CODE_ATTRIBUTE));
     }
 
     @Test
