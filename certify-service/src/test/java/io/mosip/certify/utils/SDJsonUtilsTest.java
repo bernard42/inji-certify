@@ -375,7 +375,7 @@ public class SDJsonUtilsTest {
   }
 
   @Test
-  public void getFieldName_ReturnsTheLastFieldWithoutArrayIndex() {
+  public void should_returnLastFieldWithoutArrayIndex_when_pathContainsFields() {
       assertEquals("city", SDJsonUtils.getFieldName("$.address.city"));
       assertEquals("nationalities", SDJsonUtils.getFieldName("$.nationalities[*]"));
       assertEquals("name", SDJsonUtils.getFieldName("$.people[0].name"));
@@ -383,12 +383,23 @@ public class SDJsonUtilsTest {
   }
 
   @Test
-  public void isFieldInTemplate_MatchesAJsonKeyOnly() {
+  public void should_matchOnlyJsonKeys_when_templateContainsVariablesAndKeys() {
       String template = "{\"name\": \"${name}\" #if($nickname), \"nickname\" : \"${nickname}\"#end}";
 
       assertTrue(SDJsonUtils.isFieldInTemplate(template, "nickname"));
       // Present only as a Velocity variable or a value, not as a key.
       assertFalse(SDJsonUtils.isFieldInTemplate("{\"alias\": \"${name}\"}", "name"));
       assertFalse(SDJsonUtils.isFieldInTemplate(template, "nick"));
+  }
+
+  @Test
+  public void should_acceptOnlyWellFormedPaths_when_checkingPathSyntax() {
+      assertTrue(SDJsonUtils.isPathSyntaxValid("$.address.city"));
+      assertTrue(SDJsonUtils.isPathSyntaxValid("$.nationalities[*]"));
+      assertTrue(SDJsonUtils.isPathSyntaxValid("$.people[0].name"));
+      assertFalse(SDJsonUtils.isPathSyntaxValid("name"));
+      assertFalse(SDJsonUtils.isPathSyntaxValid("$.name[-1]"));
+      assertFalse(SDJsonUtils.isPathSyntaxValid("$..name"));
+      assertFalse(SDJsonUtils.isPathSyntaxValid(null));
   }
 }

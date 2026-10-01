@@ -89,6 +89,11 @@ public class SDJWT extends Credential{
                     presentSdPaths.add(path);
                     continue;
                 }
+                // isPathValid is also false for a malformed path. That is a configuration error, and
+                // must not reach the fallback below, which would accept it by its field name alone.
+                if (!SDJsonUtils.isPathSyntaxValid(path)) {
+                    throw new CertifyException(ErrorConstants.SD_CLAIMS_PARSE_ERROR, "SD-Claim path '" + path + "' is not a valid JSON path.");
+                }
                 // The check runs on this holder's credential, so a field the template emits only
                 // conditionally (#if) or as an empty array is missing for some holders. That is not a
                 // misconfiguration, and the claim simply has nothing to disclose.

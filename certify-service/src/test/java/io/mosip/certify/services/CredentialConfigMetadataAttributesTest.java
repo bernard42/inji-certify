@@ -387,7 +387,7 @@ public class CredentialConfigMetadataAttributesTest {
      * COSE identifiers but are outside that list, so an mso_mdoc configuration may not use them.
      */
     @Test
-    public void addMsoMdocWithAlgorithmOutsideIso18013_5_IsRejected() {
+    public void should_rejectConfiguration_when_msoMdocAlgorithmIsUnsupported() {
         LinkedHashMap<String, List<String>> signingAlgs = new LinkedHashMap<>();
         signingAlgs.put("Ed25519Signature2020", List.of("EdDSA", "RS256", "ES256K"));
         ReflectionTestUtils.setField(credentialConfigurationService, "credentialSigningAlgValuesSupportedMap", signingAlgs);
@@ -762,7 +762,7 @@ public class CredentialConfigMetadataAttributesTest {
      * advertised with something the format cannot carry, and every other configuration is still served.
      */
     @Test
-    public void metadata_ForLegacyMsoMdocRowExpandingToUnmappableAlg_LeavesOutOnlyThatConfiguration() {
+    public void should_omitOnlyInvalidConfiguration_when_legacyMsoMdocAlgorithmIsUnmappable() {
         LinkedHashMap<String, List<String>> signingAlgs = new LinkedHashMap<>();
         signingAlgs.put("Ed25519Signature2020", List.of("EdDSA", "PS256"));
         ReflectionTestUtils.setField(credentialConfigurationService, "credentialSigningAlgValuesSupportedMap", signingAlgs);
@@ -785,7 +785,7 @@ public class CredentialConfigMetadataAttributesTest {
      * either. Before, the exception escaped and the endpoint failed for every credential type.
      */
     @Test
-    public void metadata_ForProofTypeWithNoSigningAlgs_LeavesOutOnlyThatConfiguration() {
+    public void should_omitOnlyInvalidConfiguration_when_proofTypeHasNoSigningAlgorithms() {
         LinkedHashMap<String, Object> proofTypes = new LinkedHashMap<>();
         proofTypes.put("jwt", Map.of(PROOF_SIGNING_ALGS, List.of("EdDSA")));
         proofTypes.put("ldp_vp", Map.of(PROOF_SIGNING_ALGS, List.of()));
@@ -809,7 +809,7 @@ public class CredentialConfigMetadataAttributesTest {
      * the metadata endpoint keeps serving every other configuration.
      */
     @Test
-    public void validateStoredConfigurations_WithAConfigurationThatCannotBeAdvertised_DoesNotThrow() {
+    public void should_completeStartupValidation_when_configurationCannotBeAdvertised() {
         LinkedHashMap<String, List<String>> signingAlgs = new LinkedHashMap<>();
         signingAlgs.put("Ed25519Signature2020", List.of("EdDSA", "PS256"));
         ReflectionTestUtils.setField(credentialConfigurationService, "credentialSigningAlgValuesSupportedMap", signingAlgs);

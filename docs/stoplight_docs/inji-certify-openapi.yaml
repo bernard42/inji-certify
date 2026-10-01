@@ -751,7 +751,7 @@ paths:
                 value:
                   credentialConfigKeyId: DrivingLicenseCredential12
                   credentialFormat: mso_mdoc
-                  signatureCryptoSuite: RsaSignature2018
+                  signatureCryptoSuite: EcdsaSecp256r1Signature2019
                   metaDataDisplay:
                     - name: Mobile Driving License
                       locale: en
