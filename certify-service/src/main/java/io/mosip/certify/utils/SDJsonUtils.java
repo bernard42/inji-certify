@@ -17,6 +17,10 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class SDJsonUtils {
+
+    private static final Pattern SD_PATH_SYNTAX =
+            Pattern.compile("^\\$(?:\\.[^.\\[\\]]+|\\[(?:\\*|0|[1-9]\\d*)\\])*$");
+
     /**
      * This method constructs the SD-JWT payload for a given JSON node.
      * <p>
@@ -223,13 +227,6 @@ public class SDJsonUtils {
     }
 
     /**
-     * Validates if a JSON path exists in a given JsonNode.
-     *
-     * @param root The root JsonNode.
-     * @param path The JSON path to validate (e.g. $.credentialSubject.name, $.hobbies[*])
-     * @return true if the path exists, false otherwise.
-     */
-    /**
      * The name of the field a selective disclosure path ends on, with any array index dropped:
      * {@code $.address.city} is {@code city} and {@code $.nationalities[*]} is {@code nationalities}.
      *
@@ -253,12 +250,27 @@ public class SDJsonUtils {
                 && Pattern.compile("\"" + Pattern.quote(field) + "\"\\s*:").matcher(template).find();
     }
 
+    /**
+     * Whether a selective disclosure path is well formed: {@code $} followed by {@code .field} and
+     * {@code [index]} or {@code [*]} segments. Says nothing about whether the path exists in a credential.
+     */
+    public static boolean isPathSyntaxValid(String path) {
+        return path != null && SD_PATH_SYNTAX.matcher(path.trim()).matches();
+    }
+
+    /**
+     * Validates if a JSON path exists in a given JsonNode.
+     *
+     * @param root The root JsonNode.
+     * @param path The JSON path to validate (e.g. $.credentialSubject.name, $.hobbies[*])
+     * @return true if the path exists, false otherwise.
+     */
     public static boolean isPathValid(JsonNode root, String path) {
         if (path == null || path.trim().isEmpty()) {
             return false;
         }
         path = path.trim();
-        if (!path.matches("^\\$(?:\\.[^.\\[\\]]+|\\[(?:\\*|0|[1-9]\\d*)\\])*$")) {
+        if (!isPathSyntaxValid(path)) {
             return false;
         }
         if (path.contains("..")) {

@@ -93,6 +93,25 @@ public class SDJWTTest {
     }
 
     @Test
+    public void should_throwCertifyException_when_sdClaimPathIsMalformed() {
+        // The template declares "name", so the optional-field fallback would accept these by their
+        // field name alone, and name would be issued without being selectively disclosable.
+        String mockTemplateName = "mockTemplate";
+        when(mockFormatter.format(any(Map.class))).thenReturn("{\"name\": \"John\"}");
+
+        for (String path : Arrays.asList("name", "$.name[-1]")) {
+            when(mockFormatter.getSelectiveDisclosureInfo(mockTemplateName)).thenReturn(Arrays.asList(path));
+
+            CertifyException exception = assertThrows(CertifyException.class,
+                    () -> sdjwt.createCredential(new HashMap<>(), mockTemplateName));
+
+            assertEquals(ErrorConstants.SD_CLAIMS_PARSE_ERROR, exception.getErrorCode());
+            assertTrue(exception.getMessage().contains("SD-Claim path '" + path + "' is not a valid JSON path."));
+        }
+        verify(mockFormatter, never()).getTemplate(mockTemplateName);
+    }
+
+    @Test
     public void should_issueWithoutTheClaim_when_optionalSdFieldIsMissingForThisHolder() {
         // The template emits nickname only #if the holder has one. This holder has none, so the
         // path is absent from their credential, but the configuration is not wrong.
