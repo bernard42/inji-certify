@@ -1,6 +1,8 @@
 package io.mosip.certify.utils;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -227,27 +229,94 @@ public class SDJsonUtils {
     }
 
     /**
-     * The name of the field a selective disclosure path ends on, with any array index dropped:
-     * {@code $.address.city} is {@code city} and {@code $.nationalities[*]} is {@code nationalities}.
-     *
-     * @return the field name, or {@code null} when the path names no field (for example {@code $})
+     * The field names along a selective disclosure path, with array indexes dropped:
+     * {@code $.address.city} is {@code [address, city]} and {@code $.people[*].name} is
+     * {@code [people, name]}. Empty for {@code $}.
      */
-    public static String getFieldName(String path) {
-        if (path == null) {
-            return null;
+    static List<String> getPathFields(String path) {
+        List<String> fields = new ArrayList<>();
+        for (String segment : path.trim().replaceAll("\\[[^\\]]*\\]", "").split("\\.")) {
+            if (!segment.isEmpty() && !segment.equals("$")) {
+                fields.add(segment);
+            }
         }
-        String[] segments = path.trim().replaceAll("\\[[^\\]]*\\]", "").split("\\.");
-        String last = segments[segments.length - 1];
-        return last.isEmpty() || last.equals("$") ? null : last;
+        return fields;
     }
 
     /**
-     * Whether the raw VC template declares a JSON key with this name. The template is Velocity, not
-     * JSON, so it is searched as text: {@code "field":} anywhere, including inside an {@code #if} block.
+     * Whether the raw VC template declares this path: each of its fields as a JSON key, nested under
+     * the one before it. Array levels are skipped, as they are in the path.
+     *
+     * <p>The template is Velocity, not JSON, so it is scanned rather than parsed. Directives such as
+     * {@code #if} contain no braces, so a key inside a conditional block counts as declared, and the
+     * braces of {@code ${...}}, {@code $!{...}} and {@code #{...}} are skipped along with comments.
+     *
+     * @return {@code false} for {@code $}, which names no field
      */
-    public static boolean isFieldInTemplate(String template, String field) {
-        return template != null && field != null
-                && Pattern.compile("\"" + Pattern.quote(field) + "\"\\s*:").matcher(template).find();
+    public static boolean isPathInTemplate(String template, String path) {
+        if (template == null || path == null) {
+            return false;
+        }
+        List<String> target = getPathFields(path);
+        if (target.isEmpty()) {
+            return false;
+        }
+        Deque<String> parents = new ArrayDeque<>();   // key that opened each enclosing {/[; "" when none
+        String pendingKey = null;
+        int n = template.length();
+        for (int i = 0; i < n; i++) {
+            char c = template.charAt(i);
+            if (c == '"') {
+                int end = i + 1;
+                StringBuilder value = new StringBuilder();
+                while (end < n && template.charAt(end) != '"') {
+                    if (template.charAt(end) == '\\' && end + 1 < n) {
+                        end++;
+                    }
+                    value.append(template.charAt(end));
+                    end++;
+                }
+                i = end;
+                int next = i + 1;
+                while (next < n && Character.isWhitespace(template.charAt(next))) {
+                    next++;
+                }
+                if (next < n && template.charAt(next) == ':') {
+                    pendingKey = value.toString();
+                    List<String> current = new ArrayList<>();
+                    parents.descendingIterator().forEachRemaining(key -> {
+                        if (!key.isEmpty()) {
+                            current.add(key);
+                        }
+                    });
+                    current.add(pendingKey);
+                    if (current.equals(target)) {
+                        return true;
+                    }
+                }
+            } else if ((c == '$' || c == '#') && i + 1 < n
+                    && (template.charAt(i + 1) == '{' || (template.charAt(i + 1) == '!' && i + 2 < n && template.charAt(i + 2) == '{'))) {
+                int close = template.indexOf('}', i);
+                i = close < 0 ? n : close;
+            } else if (c == '#' && i + 1 < n && template.charAt(i + 1) == '#') {
+                int eol = template.indexOf('\n', i);
+                i = eol < 0 ? n : eol;
+            } else if (c == '#' && i + 1 < n && template.charAt(i + 1) == '*') {
+                int close = template.indexOf("*#", i + 2);
+                i = close < 0 ? n : close + 1;
+            } else if (c == '{' || c == '[') {
+                parents.push(pendingKey == null ? "" : pendingKey);
+                pendingKey = null;
+            } else if (c == '}' || c == ']') {
+                if (!parents.isEmpty()) {
+                    parents.pop();
+                }
+                pendingKey = null;
+            } else if (c == ',') {
+                pendingKey = null;
+            }
+        }
+        return false;
     }
 
     /**

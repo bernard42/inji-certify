@@ -375,21 +375,62 @@ public class SDJsonUtilsTest {
   }
 
   @Test
-  public void should_returnLastFieldWithoutArrayIndex_when_pathContainsFields() {
-      assertEquals("city", SDJsonUtils.getFieldName("$.address.city"));
-      assertEquals("nationalities", SDJsonUtils.getFieldName("$.nationalities[*]"));
-      assertEquals("name", SDJsonUtils.getFieldName("$.people[0].name"));
-      assertNull(SDJsonUtils.getFieldName("$"));
+  public void should_listFieldsWithoutArrayIndexes_when_pathContainsFields() {
+      assertEquals(Arrays.asList("address", "city"), SDJsonUtils.getPathFields("$.address.city"));
+      assertEquals(Arrays.asList("nationalities"), SDJsonUtils.getPathFields("$.nationalities[*]"));
+      assertEquals(Arrays.asList("people", "name"), SDJsonUtils.getPathFields("$.people[0].name"));
+      assertTrue(SDJsonUtils.getPathFields("$").isEmpty());
   }
 
   @Test
-  public void should_matchOnlyJsonKeys_when_templateContainsVariablesAndKeys() {
+  public void should_findPath_when_templateDeclaresItUnderTheSameParents() {
+      String template = "{\"credentialSubject\": {\"address\": {\"street\": \"${street}\", \"city\": \"${city}\"}}}";
+
+      assertTrue(SDJsonUtils.isPathInTemplate(template, "$.credentialSubject.address.street"));
+      assertTrue(SDJsonUtils.isPathInTemplate(template, "$.credentialSubject.address"));
+      assertFalse(SDJsonUtils.isPathInTemplate(template, "$.address.street"));
+  }
+
+  @Test
+  public void should_notFindPath_when_sameFieldIsDeclaredUnderAnotherObject() {
+      // street exists, but under office: an absent $.address.street is not an optional field.
+      String template = "{\"office\": {\"street\": \"${officeStreet}\"}, \"address\": {\"city\": \"${city}\"}}";
+
+      assertFalse(SDJsonUtils.isPathInTemplate(template, "$.address.street"));
+      assertTrue(SDJsonUtils.isPathInTemplate(template, "$.office.street"));
+  }
+
+  @Test
+  public void should_findPath_when_fieldIsInsideAConditionalBlock() {
       String template = "{\"name\": \"${name}\" #if($nickname), \"nickname\" : \"${nickname}\"#end}";
 
-      assertTrue(SDJsonUtils.isFieldInTemplate(template, "nickname"));
-      // Present only as a Velocity variable or a value, not as a key.
-      assertFalse(SDJsonUtils.isFieldInTemplate("{\"alias\": \"${name}\"}", "name"));
-      assertFalse(SDJsonUtils.isFieldInTemplate(template, "nick"));
+      assertTrue(SDJsonUtils.isPathInTemplate(template, "$.nickname"));
+      assertFalse(SDJsonUtils.isPathInTemplate(template, "$.nick"));
+  }
+
+  @Test
+  public void should_findPath_when_fieldIsAnArrayOrInsideOne() {
+      String template = "{\"nationalities\": ${nationalities}, \"people\": ["
+              + "#foreach($p in $people){\"name\": \"$p.name\"}#if($foreach.hasNext),#end#end]}";
+
+      assertTrue(SDJsonUtils.isPathInTemplate(template, "$.nationalities[*]"));
+      assertTrue(SDJsonUtils.isPathInTemplate(template, "$.people[*].name"));
+      assertTrue(SDJsonUtils.isPathInTemplate(template, "$.people[0].name"));
+  }
+
+  @Test
+  public void should_ignoreValuesVelocityAndComments_when_lookingForKeys() {
+      // Braces and quotes inside strings, ${...} references and comments do not change the nesting,
+      // and a name used only as a value or a variable is not a declared key.
+      String template = "## \"commented\": {\n"
+              + "{\"note\": \"a {b} \\\"c\\\"\", \"alias\": \"${name}\", #* \"hidden\": { *# \"data\": $!{data}, \"age\": ${age}}";
+
+      assertTrue(SDJsonUtils.isPathInTemplate(template, "$.age"));
+      assertTrue(SDJsonUtils.isPathInTemplate(template, "$.data"));
+      assertFalse(SDJsonUtils.isPathInTemplate(template, "$.name"));
+      assertFalse(SDJsonUtils.isPathInTemplate(template, "$.commented"));
+      assertFalse(SDJsonUtils.isPathInTemplate(template, "$.hidden"));
+      assertFalse(SDJsonUtils.isPathInTemplate(template, "$"));
   }
 
   @Test

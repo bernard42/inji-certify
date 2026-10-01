@@ -1581,7 +1581,7 @@ components:
           type: string
         sdClaim:
           type: string
-          description: 'Comma-separated list of JSON paths (for example $.fullName, $.nationalities[*]) to issue as selectively disclosable claims. Applicable for dc+sd-jwt credential type. Each path is checked against the credential issued to the holder. A path missing from it is skipped for that holder when its field is declared in vcTemplate, for example inside an #if block or as an empty array. Otherwise issuance fails with sd_claims_parse_error: SD-Claim path ''...'' not found in the issued credential.'
+          description: 'Comma-separated list of JSON paths (for example $.fullName, $.nationalities[*]) to issue as selectively disclosable claims. Applicable for dc+sd-jwt credential type. Each path is checked against the credential issued to the holder. A path missing from it is skipped for that holder when vcTemplate declares the same path, each field nested under the one before it, for example inside an #if block or as an empty array. A field of the same name under a different object does not count. Otherwise issuance fails with sd_claims_parse_error: SD-Claim path ''...'' not found in the issued credential.'
         metaDataDisplay:
           type: array
           description: 'To configure the display properties (e.g., logo, name, colors, and localization) for metadata associated with the Verifiable Credential type.'

@@ -129,6 +129,35 @@ public class SDJWTTest {
     }
 
     @Test
+    public void should_throwCertifyException_when_onlyAFieldOfTheSameNameUnderAnotherObjectIsInTheTemplate() {
+        // street is declared under office, not address, so a missing $.address.street is a wrong
+        // path, not an optional field, and must not be dropped silently.
+        String mockTemplateName = "mockTemplate";
+        when(mockFormatter.format(any(Map.class))).thenReturn("{\"office\": {\"street\": \"Main St\"}, \"address\": {\"city\": \"Pune\"}}");
+        when(mockFormatter.getSelectiveDisclosureInfo(mockTemplateName)).thenReturn(Arrays.asList("$.address.street"));
+        when(mockFormatter.getTemplate(mockTemplateName))
+                .thenReturn("{\"office\": {\"street\": \"${officeStreet}\"}, \"address\": {\"city\": \"${city}\"}}");
+
+        CertifyException exception = assertThrows(CertifyException.class,
+                () -> sdjwt.createCredential(new HashMap<>(), mockTemplateName));
+
+        assertEquals(ErrorConstants.SD_CLAIMS_PARSE_ERROR, exception.getErrorCode());
+        assertTrue(exception.getMessage().contains("SD-Claim path '$.address.street' not found in the issued credential."));
+    }
+
+    @Test
+    public void should_issueWithoutTheClaim_when_optionalNestedSdFieldIsMissingForThisHolder() {
+        String mockTemplateName = "mockTemplate";
+        when(mockFormatter.format(any(Map.class))).thenReturn("{\"address\": {\"city\": \"Pune\"}}");
+        when(mockFormatter.getSelectiveDisclosureInfo(mockTemplateName))
+                .thenReturn(Arrays.asList("$.address.city", "$.address.street"));
+        when(mockFormatter.getTemplate(mockTemplateName))
+                .thenReturn("{\"address\": {\"city\": \"${city}\"#if($street), \"street\": \"${street}\"#end}}");
+
+        assertNotNull(sdjwt.createCredential(new HashMap<>(), mockTemplateName));
+    }
+
+    @Test
     public void should_issueWithoutTheClaim_when_sdArrayIsEmptyForThisHolder() {
         String mockTemplateName = "mockTemplate";
         when(mockFormatter.format(any(Map.class))).thenReturn("{\"name\": \"John\", \"nationalities\": []}");
