@@ -82,12 +82,27 @@ public class SDJWT extends Credential{
         try {
             
             node = objectMapper.readTree(templatedJSON);
+            List<String> presentSdPaths = new ArrayList<>();
+            String template = null;
             for (String path : sdPaths) {
-                if (!SDJsonUtils.isPathValid(node, path)) {
-                    throw new CertifyException(ErrorConstants.SD_CLAIMS_PARSE_ERROR, "SD-Claim path '" + path + "' not found in the credential template.");
+                if (SDJsonUtils.isPathValid(node, path)) {
+                    presentSdPaths.add(path);
+                    continue;
                 }
+                // The check runs on this holder's credential, so a field the template emits only
+                // conditionally (#if) or as an empty array is missing for some holders. That is not a
+                // misconfiguration, and the claim simply has nothing to disclose.
+                if (template == null) {
+                    template = super.vcFormatter.getTemplate(templateName);
+                }
+                String field = SDJsonUtils.getFieldName(path);
+                if (field == null || !SDJsonUtils.isFieldInTemplate(template, field)) {
+                    throw new CertifyException(ErrorConstants.SD_CLAIMS_PARSE_ERROR, "SD-Claim path '" + path + "' not found in the issued credential.");
+                }
+                log.warn("SD-Claim path '{}' is not in the issued credential, but its field '{}' is in the template, so it is left out for this holder.",
+                        path, field);
             }
-            SDJsonUtils.constructSDPayload(node, sdObjectBuilder, disclosures, sdPaths, currentPath);
+            SDJsonUtils.constructSDPayload(node, sdObjectBuilder, disclosures, presentSdPaths, currentPath);
             Map<String,Object>  sdClaims = sdObjectBuilder.build();
             JWTClaimsSet claimsSet = JWTClaimsSet.parse(sdClaims);
             PlainJWT jwt = new PlainJWT(header, claimsSet);

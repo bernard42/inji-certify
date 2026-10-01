@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import com.authlete.sd.Disclosure;
 import com.authlete.sd.SDObjectBuilder;
@@ -228,6 +229,30 @@ public class SDJsonUtils {
      * @param path The JSON path to validate (e.g. $.credentialSubject.name, $.hobbies[*])
      * @return true if the path exists, false otherwise.
      */
+    /**
+     * The name of the field a selective disclosure path ends on, with any array index dropped:
+     * {@code $.address.city} is {@code city} and {@code $.nationalities[*]} is {@code nationalities}.
+     *
+     * @return the field name, or {@code null} when the path names no field (for example {@code $})
+     */
+    public static String getFieldName(String path) {
+        if (path == null) {
+            return null;
+        }
+        String[] segments = path.trim().replaceAll("\\[[^\\]]*\\]", "").split("\\.");
+        String last = segments[segments.length - 1];
+        return last.isEmpty() || last.equals("$") ? null : last;
+    }
+
+    /**
+     * Whether the raw VC template declares a JSON key with this name. The template is Velocity, not
+     * JSON, so it is searched as text: {@code "field":} anywhere, including inside an {@code #if} block.
+     */
+    public static boolean isFieldInTemplate(String template, String field) {
+        return template != null && field != null
+                && Pattern.compile("\"" + Pattern.quote(field) + "\"\\s*:").matcher(template).find();
+    }
+
     public static boolean isPathValid(JsonNode root, String path) {
         if (path == null || path.trim().isEmpty()) {
             return false;
