@@ -100,12 +100,13 @@ public class SDJWT extends Credential{
                 if (template == null) {
                     template = super.vcFormatter.getTemplate(templateName);
                 }
-                String field = SDJsonUtils.getFieldName(path);
-                if (field == null || !SDJsonUtils.isFieldInTemplate(template, field)) {
+                // The whole path has to be declared: a key of the same name under another object does
+                // not make this one optional, and would silently drop the configured disclosure.
+                if (!SDJsonUtils.isPathInTemplate(template, path)) {
                     throw new CertifyException(ErrorConstants.SD_CLAIMS_PARSE_ERROR, "SD-Claim path '" + path + "' not found in the issued credential.");
                 }
-                log.warn("SD-Claim path '{}' is not in the issued credential, but its field '{}' is in the template, so it is left out for this holder.",
-                        path, field);
+                log.warn("SD-Claim path '{}' is not in the issued credential, but the template declares it, so it is left out for this holder.",
+                        path);
             }
             SDJsonUtils.constructSDPayload(node, sdObjectBuilder, disclosures, presentSdPaths, currentPath);
             Map<String,Object>  sdClaims = sdObjectBuilder.build();
