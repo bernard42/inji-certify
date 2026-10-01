@@ -373,4 +373,22 @@ public class SDJsonUtilsTest {
       Map<String, Object> claims = builder.build();
       assertTrue(claims.containsKey("people"));
   }
+
+  @Test
+  public void getFieldName_ReturnsTheLastFieldWithoutArrayIndex() {
+      assertEquals("city", SDJsonUtils.getFieldName("$.address.city"));
+      assertEquals("nationalities", SDJsonUtils.getFieldName("$.nationalities[*]"));
+      assertEquals("name", SDJsonUtils.getFieldName("$.people[0].name"));
+      assertNull(SDJsonUtils.getFieldName("$"));
+  }
+
+  @Test
+  public void isFieldInTemplate_MatchesAJsonKeyOnly() {
+      String template = "{\"name\": \"${name}\" #if($nickname), \"nickname\" : \"${nickname}\"#end}";
+
+      assertTrue(SDJsonUtils.isFieldInTemplate(template, "nickname"));
+      // Present only as a Velocity variable or a value, not as a key.
+      assertFalse(SDJsonUtils.isFieldInTemplate("{\"alias\": \"${name}\"}", "name"));
+      assertFalse(SDJsonUtils.isFieldInTemplate(template, "nick"));
+  }
 }

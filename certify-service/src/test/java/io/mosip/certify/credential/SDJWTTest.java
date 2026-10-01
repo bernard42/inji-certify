@@ -81,13 +81,44 @@ public class SDJWTTest {
         when(mockFormatter.format(any(Map.class))).thenReturn(templateJson);
         when(mockFormatter.getSelectiveDisclosureInfo(mockTemplateName))
                 .thenReturn(Arrays.asList("$.invalid_claim"));
+        when(mockFormatter.getTemplate(mockTemplateName))
+                .thenReturn("{\"name\": \"${name}\", \"age\": ${age}}");
 
         CertifyException exception = assertThrows(CertifyException.class, () -> {
             sdjwt.createCredential(templateParams, mockTemplateName);
         });
 
         assertEquals(ErrorConstants.SD_CLAIMS_PARSE_ERROR, exception.getErrorCode());
-        assertTrue(exception.getMessage().contains("SD-Claim path '$.invalid_claim' not found in the credential template."));
+        assertTrue(exception.getMessage().contains("SD-Claim path '$.invalid_claim' not found in the issued credential."));
+    }
+
+    @Test
+    public void should_issueWithoutTheClaim_when_optionalSdFieldIsMissingForThisHolder() {
+        // The template emits nickname only #if the holder has one. This holder has none, so the
+        // path is absent from their credential, but the configuration is not wrong.
+        String mockTemplateName = "mockTemplate";
+        when(mockFormatter.format(any(Map.class))).thenReturn("{\"name\": \"John\"}");
+        when(mockFormatter.getSelectiveDisclosureInfo(mockTemplateName))
+                .thenReturn(Arrays.asList("$.name", "$.nickname"));
+        when(mockFormatter.getTemplate(mockTemplateName))
+                .thenReturn("{\"name\": \"${name}\" #if($nickname), \"nickname\": \"${nickname}\"#end}");
+
+        String result = sdjwt.createCredential(new HashMap<>(), mockTemplateName);
+
+        // One disclosure, for name: nickname has nothing to disclose for this holder.
+        assertEquals(2, result.split("~", -1).length - 1);
+    }
+
+    @Test
+    public void should_issueWithoutTheClaim_when_sdArrayIsEmptyForThisHolder() {
+        String mockTemplateName = "mockTemplate";
+        when(mockFormatter.format(any(Map.class))).thenReturn("{\"name\": \"John\", \"nationalities\": []}");
+        when(mockFormatter.getSelectiveDisclosureInfo(mockTemplateName))
+                .thenReturn(Arrays.asList("$.nationalities[*]"));
+        when(mockFormatter.getTemplate(mockTemplateName))
+                .thenReturn("{\"name\": \"${name}\", \"nationalities\": ${nationalities}}");
+
+        assertNotNull(sdjwt.createCredential(new HashMap<>(), mockTemplateName));
     }
 
     @Test
