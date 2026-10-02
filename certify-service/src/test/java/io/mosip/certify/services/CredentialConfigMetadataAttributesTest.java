@@ -378,7 +378,9 @@ public class CredentialConfigMetadataAttributesTest {
 
         Assert.assertEquals(ErrorConstants.UNSUPPORTED_CREDENTIAL_SIGNING_ALG,
                 exception.getErrors().getFirst().getErrorCode());
-        Assert.assertTrue(exception.getErrors().getFirst().getErrorMessage().contains("no COSE equivalent"));
+        // PS256 is named, and the reason is that mso_mdoc does not support it, not a missing COSE identifier.
+        Assert.assertTrue(exception.getErrors().getFirst().getErrorMessage()
+                .contains("PS256 is not supported for the credential format mso_mdoc"));
         verify(credentialConfigRepository, never()).save(any(CredentialConfig.class));
     }
 
