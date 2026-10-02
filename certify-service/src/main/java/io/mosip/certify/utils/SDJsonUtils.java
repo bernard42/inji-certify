@@ -243,17 +243,6 @@ public class SDJsonUtils {
         return fields;
     }
 
-    /**
-     * Whether the raw VC template declares this path: each of its fields as a JSON key, nested under
-     * the one before it. Array levels are skipped, as they are in the path, and a {@code *} field
-     * matches any key at its level.
-     *
-     * <p>The template is Velocity, not JSON, so it is scanned rather than parsed. Directives such as
-     * {@code #if} contain no braces, so a key inside a conditional block counts as declared, and the
-     * braces of {@code ${...}}, {@code $!{...}} and {@code #{...}} are skipped along with comments.
-     *
-     * @return {@code false} for {@code $}, which names no field
-     */
     /** Field-by-field comparison where a {@code *} in the path matches any one key at that level. */
     private static boolean matchesPath(List<String> declared, List<String> target) {
         if (declared.size() != target.size()) {
@@ -267,6 +256,17 @@ public class SDJsonUtils {
         return true;
     }
 
+    /**
+     * Whether the raw VC template declares this path: each of its fields as a JSON key, nested under
+     * the one before it. Array levels are skipped, as they are in the path, and a {@code *} field
+     * matches any key at its level.
+     *
+     * <p>The template is Velocity, not JSON, so it is scanned rather than parsed. Directives such as
+     * {@code #if} contain no braces, so a key inside a conditional block counts as declared, and the
+     * braces of {@code ${...}}, {@code $!{...}} and {@code #{...}} are skipped along with comments.
+     *
+     * @return {@code false} for {@code $}, which names no field
+     */
     public static boolean isPathInTemplate(String template, String path) {
         if (template == null || path == null) {
             return false;

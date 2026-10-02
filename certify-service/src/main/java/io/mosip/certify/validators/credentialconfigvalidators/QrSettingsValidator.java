@@ -138,19 +138,18 @@ public class QrSettingsValidator {
      * @return true if the field or its terminal field exists in the template, false otherwise
      */
     private static boolean isFieldPresentInTemplate(String varName, Set<String> templateVariables) {
-        if (templateVariables.contains(varName)) {
-            return true;
-        }
-        // Composite key like address#en.country -> check the terminal field 'country'
+        // Composite key like address#en.country -> the whole key, or its terminal field 'country'
         if (varName.contains("#") || varName.contains(".")) {
             // -1 keeps empty parts, so ${address.} or ${address..city} is rejected rather than
-            // having the empty part dropped and an earlier part taken as the terminal field.
+            // having the empty part dropped and an earlier part taken as the terminal field. This
+            // runs before the exact match, so the template containing the same malformed reference
+            // does not make it valid.
             String[] parts = varName.split("[#.]", -1);
             if (Arrays.stream(parts).anyMatch(String::isEmpty)) {
                 return false;
             }
-            return templateVariables.contains(parts[parts.length - 1]);
+            return templateVariables.contains(varName) || templateVariables.contains(parts[parts.length - 1]);
         }
-        return false;
+        return templateVariables.contains(varName);
     }
 }
