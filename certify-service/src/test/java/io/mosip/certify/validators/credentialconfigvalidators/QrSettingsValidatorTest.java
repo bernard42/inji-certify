@@ -150,6 +150,18 @@ public class QrSettingsValidatorTest {
     }
 
     @Test
+    public void should_throwException_when_compositeFieldHasAnEmptyPart() {
+        // Splitting used to drop the empty part, so the root (address) was taken as the terminal field.
+        String template = "{\"credentialSubject\": {\"address\": \"${address}\", \"city\": \"${city}\"}}";
+
+        for (String field : List.of("${address.}", "${address..city}", "${address#}")) {
+            CertifyException ex = assertThrows(CertifyException.class,
+                    () -> QrSettingsValidator.validateQrSettings(List.of(Map.of("Field", field)), template));
+            assertEquals(ErrorConstants.QR_INVALID_FIELD_REFERENCE, ex.getErrorCode());
+        }
+    }
+
+    @Test
     public void should_validateSuccessfully_when_compositeFieldMatchesTemplateExactly() {
         String templateWithPath = "{\"credentialSubject\": {\"pincode\": \"${address.pincode}\"}}";
         List<Map<String, Object>> qrSettings = List.of(

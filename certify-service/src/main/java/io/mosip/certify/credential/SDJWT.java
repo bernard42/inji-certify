@@ -94,6 +94,11 @@ public class SDJWT extends Credential{
                 if (!SDJsonUtils.isPathSyntaxValid(path)) {
                     throw new CertifyException(ErrorConstants.SD_CLAIMS_PARSE_ERROR, "SD-Claim path '" + path + "' is not a valid JSON path.");
                 }
+                // Only data that is not there may be optional. A value of another shape, such as a
+                // string where the path expects an array, would otherwise be issued as a plain claim.
+                if (!SDJsonUtils.isPathAbsent(node, path)) {
+                    throw new CertifyException(ErrorConstants.SD_CLAIMS_PARSE_ERROR, "SD-Claim path '" + path + "' does not match the structure of the issued credential.");
+                }
                 // The check runs on this holder's credential, so a field the template emits only
                 // conditionally (#if) or as an empty array is missing for some holders. That is not a
                 // misconfiguration, and the claim simply has nothing to disclose.
