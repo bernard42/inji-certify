@@ -162,6 +162,18 @@ public class QrSettingsValidatorTest {
     }
 
     @Test
+    public void should_throwException_when_malformedCompositeFieldAlsoAppearsInTemplate() {
+        // The template carrying the same malformed reference must not make it valid through the
+        // exact-match check.
+        String template = "{\"credentialSubject\": {\"city\": \"${address..city}\"}}";
+
+        CertifyException ex = assertThrows(CertifyException.class,
+                () -> QrSettingsValidator.validateQrSettings(List.of(Map.of("City", "${address..city}")), template));
+
+        assertEquals(ErrorConstants.QR_INVALID_FIELD_REFERENCE, ex.getErrorCode());
+    }
+
+    @Test
     public void should_validateSuccessfully_when_compositeFieldMatchesTemplateExactly() {
         String templateWithPath = "{\"credentialSubject\": {\"pincode\": \"${address.pincode}\"}}";
         List<Map<String, Object>> qrSettings = List.of(
