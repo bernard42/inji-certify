@@ -172,7 +172,7 @@ public class ExceptionHandlerAdviceTest {
     }
 
     @Test
-    public void should_answerInvalidTokenOnBearer_andAdvertiseDpop_when_boundTokenIsPresentedAsBearer() {
+    public void should_answerInvalidTokenAndAdvertiseDpop_when_boundTokenIsPresentedAsBearer() {
         // RFC 9449 §7.2 Figure 18: the error goes on the scheme the caller used, and a
         // separate DPoP challenge tells it to retry under DPoP. algs belongs to DPoP only.
         String description = "This access token is DPoP-bound and cannot be presented as a Bearer token.";
