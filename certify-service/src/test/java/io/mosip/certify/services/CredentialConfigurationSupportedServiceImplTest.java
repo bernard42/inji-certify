@@ -431,14 +431,14 @@ public class CredentialConfigurationSupportedServiceImplTest {
         mdocConfig.setVcTemplate("mdoc_template");
         mdocConfig.setCredentialFormat("mso_mdoc");
         mdocConfig.setDocType("docType1");
-        mdocConfig.setSignatureCryptoSuite("Ed25519Signature2020");
+        mdocConfig.setSignatureCryptoSuite("EcdsaSecp256r1Signature2019");
 
         CredentialConfigurationDTO mdocDTO = new CredentialConfigurationDTO();
         mdocDTO.setCredentialFormat("mso_mdoc");
         mdocDTO.setCredentialConfigKeyId("mdoc-credential");
         mdocDTO.setDocType("docType1");
         mdocDTO.setVcTemplate("mdoc_template");
-        mdocDTO.setSignatureCryptoSuite("Ed25519Signature2020"); // required
+        mdocDTO.setSignatureCryptoSuite("EcdsaSecp256r1Signature2019"); // required
 
         when(credentialConfigMapper.toEntity(any(CredentialConfigurationDTO.class))).thenReturn(mdocConfig);
         when(credentialConfigRepository.save(any(CredentialConfig.class))).thenReturn(mdocConfig);

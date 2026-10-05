@@ -60,6 +60,7 @@ public class CredentialConfigMetadataAttributesTest {
         LinkedHashMap<String, List<String>> signingAlgs = new LinkedHashMap<>();
         signingAlgs.put("Ed25519Signature2020", List.of("EdDSA"));
         signingAlgs.put("RsaSignature2018", List.of("RS256"));
+        signingAlgs.put("EcdsaSecp256r1Signature2019", List.of("ES256"));
 
         LinkedHashMap<String, Object> proofTypes = new LinkedHashMap<>();
         proofTypes.put("jwt", Map.of(PROOF_SIGNING_ALGS, List.of("RS256", "PS256", "ES256", "EdDSA")));
@@ -133,7 +134,7 @@ public class CredentialConfigMetadataAttributesTest {
         dto.setVcTemplate("test_template");
         dto.setCredentialFormat("mso_mdoc");
         dto.setDocType("org.iso.18013.5.1.mDL");
-        dto.setSignatureCryptoSuite("Ed25519Signature2020");
+        dto.setSignatureCryptoSuite("EcdsaSecp256r1Signature2019");
         return dto;
     }
 
@@ -143,8 +144,8 @@ public class CredentialConfigMetadataAttributesTest {
         entity.setStatus("active");
         entity.setCredentialFormat("mso_mdoc");
         entity.setDocType("org.iso.18013.5.1.mDL");
-        entity.setSignatureCryptoSuite("Ed25519Signature2020");
-        entity.setSignatureAlgo("EdDSA");
+        entity.setSignatureCryptoSuite("EcdsaSecp256r1Signature2019");
+        entity.setSignatureAlgo("ES256");
         return entity;
     }
 
@@ -367,7 +368,7 @@ public class CredentialConfigMetadataAttributesTest {
     @Test
     public void addMsoMdocWithAlgorithmHavingNoCoseEquivalent_IsRejected() {
         LinkedHashMap<String, List<String>> signingAlgs = new LinkedHashMap<>();
-        signingAlgs.put("Ed25519Signature2020", List.of("EdDSA", "PS256"));
+        signingAlgs.put("EcdsaSecp256r1Signature2019", List.of("ES256", "PS256"));
         ReflectionTestUtils.setField(credentialConfigurationService, "credentialSigningAlgValuesSupportedMap", signingAlgs);
         when(credentialConfigMapper.toEntity(any(CredentialConfigurationDTO.class))).thenReturn(msoMdocEntity());
         CredentialConfigurationDTO request = msoMdocRequest();
@@ -385,17 +386,17 @@ public class CredentialConfigMetadataAttributesTest {
     }
 
     /**
-     * ISO 18013-5 allows ES256, ES384, ES512 and EdDSA for an mdoc's issuerAuth. RS256 and ES256K have
-     * COSE identifiers but are outside that list, so an mso_mdoc configuration may not use them.
+     * Only ES256 is supported for an mdoc's issuerAuth. EdDSA, RS256 and ES256K have COSE identifiers,
+     * but an mso_mdoc configuration may not use them.
      */
     @Test
     public void should_rejectConfiguration_when_msoMdocAlgorithmIsUnsupported() {
         LinkedHashMap<String, List<String>> signingAlgs = new LinkedHashMap<>();
-        signingAlgs.put("Ed25519Signature2020", List.of("EdDSA", "RS256", "ES256K"));
+        signingAlgs.put("EcdsaSecp256r1Signature2019", List.of("ES256", "EdDSA", "RS256", "ES256K"));
         ReflectionTestUtils.setField(credentialConfigurationService, "credentialSigningAlgValuesSupportedMap", signingAlgs);
         when(credentialConfigMapper.toEntity(any(CredentialConfigurationDTO.class))).thenReturn(msoMdocEntity());
 
-        for (String alg : List.of("RS256", "ES256K")) {
+        for (String alg : List.of("EdDSA", "RS256", "ES256K")) {
             CredentialConfigurationDTO request = msoMdocRequest();
             request.setCredentialSigningAlgValuesSupported(List.of(alg));
 
@@ -416,7 +417,7 @@ public class CredentialConfigMetadataAttributesTest {
     @Test
     public void addMsoMdocWithSigningAlgsOmittedAndSuiteDeclaringNoCoseEquivalent_IsRejected() {
         LinkedHashMap<String, List<String>> signingAlgs = new LinkedHashMap<>();
-        signingAlgs.put("Ed25519Signature2020", List.of("EdDSA", "PS256"));
+        signingAlgs.put("EcdsaSecp256r1Signature2019", List.of("ES256", "PS256"));
         ReflectionTestUtils.setField(credentialConfigurationService, "credentialSigningAlgValuesSupportedMap", signingAlgs);
         when(credentialConfigMapper.toEntity(any(CredentialConfigurationDTO.class))).thenReturn(msoMdocEntity());
 
@@ -766,10 +767,10 @@ public class CredentialConfigMetadataAttributesTest {
     @Test
     public void should_omitOnlyInvalidConfiguration_when_legacyMsoMdocAlgorithmIsUnmappable() {
         LinkedHashMap<String, List<String>> signingAlgs = new LinkedHashMap<>();
-        signingAlgs.put("Ed25519Signature2020", List.of("EdDSA", "PS256"));
+        signingAlgs.put("EcdsaSecp256r1Signature2019", List.of("ES256", "PS256"));
         ReflectionTestUtils.setField(credentialConfigurationService, "credentialSigningAlgValuesSupportedMap", signingAlgs);
         CredentialConfig legacy = msoMdocEntity();
-        legacy.setCredentialSigningAlgValuesSupported(List.of("Ed25519Signature2020"));
+        legacy.setCredentialSigningAlgValuesSupported(List.of("EcdsaSecp256r1Signature2019"));
         CredentialConfig healthy = ldpVcEntity();
         healthy.setCredentialSigningAlgValuesSupported(List.of("EdDSA"));
 
@@ -813,10 +814,10 @@ public class CredentialConfigMetadataAttributesTest {
     @Test
     public void should_completeStartupValidation_when_configurationCannotBeAdvertised() {
         LinkedHashMap<String, List<String>> signingAlgs = new LinkedHashMap<>();
-        signingAlgs.put("Ed25519Signature2020", List.of("EdDSA", "PS256"));
+        signingAlgs.put("EcdsaSecp256r1Signature2019", List.of("ES256", "PS256"));
         ReflectionTestUtils.setField(credentialConfigurationService, "credentialSigningAlgValuesSupportedMap", signingAlgs);
         CredentialConfig legacy = msoMdocEntity();
-        legacy.setCredentialSigningAlgValuesSupported(List.of("Ed25519Signature2020"));
+        legacy.setCredentialSigningAlgValuesSupported(List.of("EcdsaSecp256r1Signature2019"));
 
         when(credentialConfigRepository.findAll()).thenReturn(List.of(legacy));
         when(credentialConfigMapper.toDto(legacy)).thenReturn(msoMdocRequest());
