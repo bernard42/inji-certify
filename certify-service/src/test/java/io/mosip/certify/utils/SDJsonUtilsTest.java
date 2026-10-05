@@ -436,6 +436,19 @@ public class SDJsonUtilsTest {
   }
 
   @Test
+  public void should_keepNesting_when_referenceContainsBraces() {
+      // A reference ends at its matching brace, not the first one: braces nested in its arguments
+      // and in its string literals must not close the object that encloses it.
+      String template = "{\"address\": {\"tags\": $!{map.get(\"a}\")}, \"lines\": ${_esc.json({'k': '{'})},"
+              + " \"city\": \"${city}\"}, \"zip\": ${zip}}";
+
+      assertTrue(SDJsonUtils.isPathInTemplate(template, "$.address.city"));
+      assertTrue(SDJsonUtils.isPathInTemplate(template, "$.zip"));
+      assertFalse(SDJsonUtils.isPathInTemplate(template, "$.city"));
+      assertFalse(SDJsonUtils.isPathInTemplate(template, "$.address.zip"));
+  }
+
+  @Test
   public void should_acceptOnlyWellFormedPaths_when_checkingPathSyntax() {
       assertTrue(SDJsonUtils.isPathSyntaxValid("$.address.city"));
       assertTrue(SDJsonUtils.isPathSyntaxValid("$.nationalities[*]"));

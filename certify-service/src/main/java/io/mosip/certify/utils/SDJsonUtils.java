@@ -310,8 +310,7 @@ public class SDJsonUtils {
                 }
             } else if ((c == '$' || c == '#') && i + 1 < n
                     && (template.charAt(i + 1) == '{' || (template.charAt(i + 1) == '!' && i + 2 < n && template.charAt(i + 2) == '{'))) {
-                int close = template.indexOf('}', i);
-                i = close < 0 ? n : close;
+                i = findReferenceEnd(template, template.charAt(i + 1) == '{' ? i + 1 : i + 2);
             } else if (c == '#' && i + 1 < n && template.charAt(i + 1) == '#') {
                 int eol = template.indexOf('\n', i);
                 i = eol < 0 ? n : eol;
@@ -331,6 +330,32 @@ public class SDJsonUtils {
             }
         }
         return false;
+    }
+
+    /**
+     * The index of the brace that closes the Velocity reference opened at {@code open}. Braces nested in
+     * its arguments are counted and its string literals skipped, so neither ends it early.
+     *
+     * @return the template length when the reference never closes
+     */
+    private static int findReferenceEnd(String template, int open) {
+        int n = template.length();
+        int depth = 0;
+        for (int i = open; i < n; i++) {
+            char c = template.charAt(i);
+            if (c == '"' || c == '\'') {
+                int close = template.indexOf(c, i + 1);
+                if (close < 0) {
+                    return n;
+                }
+                i = close;
+            } else if (c == '{') {
+                depth++;
+            } else if (c == '}' && --depth == 0) {
+                return i;
+            }
+        }
+        return n;
     }
 
     /**
