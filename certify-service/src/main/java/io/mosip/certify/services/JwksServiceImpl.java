@@ -38,17 +38,22 @@ import static io.mosip.certify.core.constants.Constants.ED25519_REF_ID;
 @Slf4j
 public class JwksServiceImpl implements JwksService {
 
-    @Autowired
-    private KeymanagerService keymanagerService;
+    private final KeymanagerService keymanagerService;
 
-    @Autowired
-    private CredentialConfigRepository credentialConfigRepository;
+    private final CredentialConfigRepository credentialConfigRepository;
 
     @Value("#{${mosip.certify.credential-config.credential-signing-alg-values-supported}}")
     private LinkedHashMap<String, List<String>> credentialSigningAlgValuesSupportedMap;
 
     @Value("#{${mosip.certify.signature-algo.key-alias-mapper:{}}}")
     private Map<String, List<List<String>>> signatureAlgoKeyAliasMapper;
+
+    @Autowired
+    public JwksServiceImpl(KeymanagerService keymanagerService,
+                           CredentialConfigRepository credentialConfigRepository) {
+        this.keymanagerService = keymanagerService;
+        this.credentialConfigRepository = credentialConfigRepository;
+    }
 
     /**
      * Internal method to fetch JWK set - cached for performance
