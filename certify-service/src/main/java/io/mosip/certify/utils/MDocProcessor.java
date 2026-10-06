@@ -48,14 +48,20 @@ public class MDocProcessor {
     private static final DateTimeFormatter VALIDITY_INFO_DATETIME_FORMATTER =
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
+
+    private final MDocConfig mDocConfig;
+
+    private final CoseSignatureService coseSignatureService;
 
     @Autowired
-    private MDocConfig mDocConfig;
-
-    @Autowired
-    private CoseSignatureService coseSignatureService;
+    public MDocProcessor(ObjectMapper objectMapper,
+                         MDocConfig mDocConfig,
+                         CoseSignatureService coseSignatureService) {
+        this.objectMapper = objectMapper;
+        this.mDocConfig = mDocConfig;
+        this.coseSignatureService = coseSignatureService;
+    }
 
     /**
      * Process templated JSON to create final mDoc structure
