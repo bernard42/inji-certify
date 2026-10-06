@@ -127,7 +127,7 @@ public class JwksServiceImpl implements JwksService {
         }
 
         // Validate certificate is not expired if expiryAt is provided
-        if (expiryAt != null && expiryAt.isBefore(LocalDateTime.now())) {
+        if (expiryAt != null && expiryAt.isBefore(LocalDateTime.now(ZoneOffset.UTC))) {
             log.debug("Certificate for keyId: {} has expired, skipping", keyId);
             return null;
         }
