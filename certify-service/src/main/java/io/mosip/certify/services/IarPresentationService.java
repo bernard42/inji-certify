@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 
 /**
@@ -277,7 +278,7 @@ public class IarPresentationService {
         log.debug("Generated authorization code for auth_session: {} (length: {})", session.getAuthSession(), authCode.length());
 
         session.setAuthorizationCode(authCode);
-        session.setCodeIssuedAt(LocalDateTime.now());
+        session.setCodeIssuedAt(LocalDateTime.now(ZoneOffset.UTC));
         iarSessionRepository.save(session);
         log.info("Authorization code stored for auth_session: {}", session.getAuthSession());
 
