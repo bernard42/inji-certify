@@ -32,6 +32,8 @@ import java.util.*;
 @Service
 public class IarPresentationService {
 
+    private static final java.security.SecureRandom SECURE_RANDOM = new java.security.SecureRandom();
+
     private final IarSessionRepository iarSessionRepository;
 
     private final ObjectMapper objectMapper;
@@ -261,12 +263,12 @@ public class IarPresentationService {
         // For Base64 URL encoding, we need approximately 3/4 of the target length in bytes
         int byteLength = (int) Math.ceil(authorizationCodeLength * 0.75);
         byte[] randomBytes = new byte[byteLength];
-        new java.security.SecureRandom().nextBytes(randomBytes);
+        SECURE_RANDOM.nextBytes(randomBytes);
         String encoded = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
         // Ensure we have enough characters, pad if necessary
         if (encoded.length() < authorizationCodeLength) {
             byte[] additionalBytes = new byte[16];
-            new java.security.SecureRandom().nextBytes(additionalBytes);
+            SECURE_RANDOM.nextBytes(additionalBytes);
             String additionalEncoded = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(additionalBytes);
             encoded = (encoded + additionalEncoded).substring(0, authorizationCodeLength);
         }
