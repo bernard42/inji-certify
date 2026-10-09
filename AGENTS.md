@@ -123,7 +123,8 @@ Certify does not issue DPoP-bound tokens — the authorization server does. eSig
 registered with `additionalConfig.dpop_bound_access_tokens: true`, and that arrived in eSignet **1.8**; against an older
 build every DPoP path fails by construction because no token carries the claim.
 
-Failures answer `401` with a `WWW-Authenticate` challenge **in the scheme the caller used**, carrying `error`,
+Apart from the disabled-mode DPoP rejection above, which always challenges with `Bearer`, failures answer `401` with a
+`WWW-Authenticate` challenge **in the scheme the caller used**, carrying `error`,
 `error_description`, and for `invalid_dpop_proof` an `algs` list. The description names the failing claim, so a wallet
 developer is told which check rejected the proof rather than a bare `invalid_dpop_proof`.
 
