@@ -118,9 +118,10 @@ registered with `additionalConfig.dpop_bound_access_tokens: true`, and that arri
 build every DPoP path fails by construction because no token carries the claim.
 
 Failures answer `401` with a `WWW-Authenticate` challenge **in the scheme the caller used**, carrying `error` and
-`error_description`. The `algs` list rides a DPoP challenge only: on the DPoP challenge itself, or, after a Bearer
-failure, on a separate error-free `DPoP algs="..."` challenge (RFC 9449 section 7.2, Figure 18). The description names the
-failing claim, so a wallet developer is told which check rejected the proof rather than a bare `invalid_dpop_proof`.
+`error_description`. The `algs` list is a DPoP parameter and appears in two cases only: on the DPoP challenge for
+`invalid_dpop_proof`, and, when a DPoP-bound token is presented as Bearer, on a separate error-free `DPoP algs="..."`
+challenge after the Bearer one (RFC 9449 section 7.2, Figure 18). Every other 401 carries no `algs`. The description names
+the failing claim, so a wallet developer is told which check rejected the proof rather than a bare `invalid_dpop_proof`.
 
 `invalid_dpop_proof` is reserved for a proof that fails the checks of RFC 9449 section 4.3. The downgrade guard answers
 `invalid_token`, because no proof took part in that request.

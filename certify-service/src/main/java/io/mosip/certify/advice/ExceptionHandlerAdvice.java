@@ -238,11 +238,14 @@ public class ExceptionHandlerAdvice extends ResponseEntityExceptionHandler imple
             List<String> algs = dpopProofValidator == null
                     ? List.of()
                     : dpopProofValidator.getAllowedAlgorithms();
-            if(!algs.isEmpty()) {
-                // algs is a DPoP auth-param, so it never goes on a Bearer challenge. A Bearer
-                // failure gets a second, error-free DPoP challenge instead, which tells the
-                // client it can retry under DPoP (RFC 9449 §7.2, Figure 18).
-                challenge.append(Constants.SCHEME_DPOP.equals(scheme) ? ", algs=\"" : ", DPoP algs=\"")
+            if(INVALID_DPOP_PROOF.equals(errorCode) && !algs.isEmpty()) {
+                challenge.append(", algs=\"")
+                        .append(quoteAuthParam(String.join(" ", algs)))
+                        .append('"');
+            } else if(Boolean.TRUE.equals(request.getAttribute(Constants.AUTH_DPOP_REQUIRED_ATTRIBUTE)) && !algs.isEmpty()) {
+                // A bound token presented as Bearer gets a second, error-free DPoP challenge,
+                // telling the client to retry under DPoP (RFC 9449 §7.2, Figure 18).
+                challenge.append(", ").append(Constants.SCHEME_DPOP).append(" algs=\"")
                         .append(quoteAuthParam(String.join(" ", algs)))
                         .append('"');
             }

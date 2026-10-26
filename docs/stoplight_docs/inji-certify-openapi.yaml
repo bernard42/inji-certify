@@ -638,9 +638,10 @@ paths:
               description: >-
                 Challenge in the caller's scheme, carrying error and error_description.
                 algs lists the signature algorithms this issuer accepts on a proof and is a
-                DPoP parameter only: after a DPoP error it is on the same challenge; after a
-                Bearer error it is on a separate DPoP challenge, telling the client it can
-                retry under DPoP (RFC 9449 section 7.2).
+                DPoP parameter only. It is on the DPoP challenge for invalid_dpop_proof, and,
+                when a DPoP-bound token is presented as Bearer, on a separate DPoP challenge
+                telling the client to retry under DPoP (RFC 9449 section 7.2). Other
+                failures carry no algs.
               schema:
                 type: string
               examples:

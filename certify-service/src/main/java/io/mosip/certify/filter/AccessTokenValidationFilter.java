@@ -138,8 +138,8 @@ public class AccessTokenValidationFilter extends OncePerRequestFilter {
 
                 } catch (CertifyException e) {
                     // Scheme-binding failures already carry a precise, caller-safe description.
-                    // The code travels with it so the handler advice can answer invalid_dpop_proof
-                    // or server_error rather than a generic invalid_token.
+                    // The code travels with it so the handler advice can answer invalid_token,
+                    // invalid_dpop_proof or server_error.
                     log.error("{} access token rejected with {}: {}", scheme, e.getErrorCode(), e.getMessage());
                     request.setAttribute(Constants.AUTH_ERROR_ATTRIBUTE, e.getMessage());
                     request.setAttribute(Constants.AUTH_ERROR_CODE_ATTRIBUTE, e.getErrorCode());
@@ -226,6 +226,9 @@ public class AccessTokenValidationFilter extends OncePerRequestFilter {
             dpopProofValidator.validate(dpopToken, token, jwt.getClaims(), request);
 
         } else if (isDpopBoundAccessToken(jwt.getClaims())) {
+            // The one Bearer failure the client can fix by switching to DPoP, so the advice
+            // tells it how - no other 401 carries the DPoP challenge.
+            request.setAttribute(Constants.AUTH_DPOP_REQUIRED_ATTRIBUTE, Boolean.TRUE);
             throw new CertifyException(ErrorConstants.INVALID_AUTH_TOKEN, ERROR_TOKEN_REQUIRES_DPOP);
         }
     }
