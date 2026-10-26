@@ -319,6 +319,11 @@ class AccessTokenValidationFilterTest {
         verify(parsedAccessToken).setActive(false);
         assertEquals(AccessTokenValidationFilter.ERROR_TOKEN_REQUIRES_DPOP,
                 request.getAttribute(Constants.AUTH_ERROR_ATTRIBUTE));
+        // No proof took part, so the token error applies, not the proof error.
+        assertEquals(ErrorConstants.INVALID_AUTH_TOKEN,
+                request.getAttribute(Constants.AUTH_ERROR_CODE_ATTRIBUTE));
+        // and the advice is told to point the client at DPoP
+        assertEquals(Boolean.TRUE, request.getAttribute(Constants.AUTH_DPOP_REQUIRED_ATTRIBUTE));
     }
 
     @Test
@@ -335,6 +340,8 @@ class AccessTokenValidationFilterTest {
         verify(parsedAccessToken).setActive(false);
         assertEquals(AccessTokenValidationFilter.ERROR_EXPIRED_TOKEN,
                 request.getAttribute(Constants.AUTH_ERROR_ATTRIBUTE));
+        // switching to DPoP would not help, so the client is not pointed at it
+        assertNull(request.getAttribute(Constants.AUTH_DPOP_REQUIRED_ATTRIBUTE));
         verify(filterChain).doFilter(request, response);
     }
 

@@ -232,6 +232,12 @@ public class ExceptionHandlerAdvice extends ResponseEntityExceptionHandler imple
                 challenge.append(", algs=\"")
                         .append(quoteAuthParam(String.join(" ", algs)))
                         .append('"');
+            } else if(Boolean.TRUE.equals(request.getAttribute(Constants.AUTH_DPOP_REQUIRED_ATTRIBUTE)) && !algs.isEmpty()) {
+                // A bound token presented as Bearer gets a second, error-free DPoP challenge,
+                // telling the client to retry under DPoP (RFC 9449 §7.2, Figure 18).
+                challenge.append(", ").append(Constants.SCHEME_DPOP).append(" algs=\"")
+                        .append(quoteAuthParam(String.join(" ", algs)))
+                        .append('"');
             }
             headers.set(HttpHeaders.WWW_AUTHENTICATE, challenge.toString());
             return new ResponseEntity<>(getVCErrorDto(errorCode, description), headers, HttpStatus.UNAUTHORIZED);

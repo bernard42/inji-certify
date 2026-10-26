@@ -117,9 +117,14 @@ Certify does not issue DPoP-bound tokens — the authorization server does. eSig
 registered with `additionalConfig.dpop_bound_access_tokens: true`, and that arrived in eSignet **1.8**; against an older
 build every DPoP path fails by construction because no token carries the claim.
 
-Failures answer `401` with a `WWW-Authenticate` challenge **in the scheme the caller used**, carrying `error`,
-`error_description`, and for `invalid_dpop_proof` an `algs` list. The description names the failing claim, so a wallet
-developer is told which check rejected the proof rather than a bare `invalid_dpop_proof`.
+Failures answer `401` with a `WWW-Authenticate` challenge **in the scheme the caller used**, carrying `error` and
+`error_description`. The `algs` list is a DPoP parameter and appears in two cases only: on the DPoP challenge for
+`invalid_dpop_proof`, and, when a DPoP-bound token is presented as Bearer, on a separate error-free `DPoP algs="..."`
+challenge after the Bearer one (RFC 9449 section 7.2, Figure 18). Every other 401 carries no `algs`. The description names
+the failing claim, so a wallet developer is told which check rejected the proof rather than a bare `invalid_dpop_proof`.
+
+`invalid_dpop_proof` is reserved for a proof that fails the checks of RFC 9449 section 4.3. The downgrade guard answers
+`invalid_token`, because no proof took part in that request.
 
 See `docs/postman_collections/authorization_code_flow/data_provider_plugin/README-mock-identity-dpop.md` for the 26-scenario conformance suite covering each rule.
 
