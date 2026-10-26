@@ -167,6 +167,18 @@ public class DIDkeysProofManagerTest {
         assertTrue(new DIDkeysProofManager().getKeyFromHeader(header).isEmpty());
     }
 
+    /**
+     * An RSA did:key with nothing after the multicodec prefix is rejected as an invalid key rather
+     * than failing with a NullPointerException.
+     */
+    @Test
+    void should_returnEmpty_when_rsaDidKeyHasNoAsn1Object() {
+        JWSHeader header = Mockito.mock(JWSHeader.class);
+        when(header.getKeyID()).thenReturn(rsaDidKey(new byte[0]));
+
+        assertTrue(new DIDkeysProofManager().getKeyFromHeader(header).isEmpty());
+    }
+
     private static String rsaDidKey(byte[] der) {
         byte[] key = new byte[der.length + 2];
         key[0] = (byte) 0x85;

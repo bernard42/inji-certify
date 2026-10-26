@@ -68,7 +68,7 @@ public class DIDkeysProofManager implements JwtProofKeyManager {
             // RSA2048
             try (ASN1InputStream asn1 = new ASN1InputStream(Arrays.copyOfRange(b, 2, b.length))) {
                 ASN1Sequence seq = (ASN1Sequence) asn1.readObject();
-                if (seq.size() != 2) {
+                if (seq == null || seq.size() != 2) {
                     // missing modulus or exponent
                    return Optional.empty();
                 }
