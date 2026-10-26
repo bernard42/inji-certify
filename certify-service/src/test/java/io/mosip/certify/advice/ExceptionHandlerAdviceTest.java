@@ -247,13 +247,15 @@ public class ExceptionHandlerAdviceTest {
 
     @Test
     public void should_omitDpopChallenge_when_noAlgorithmsAreConfigured() {
-        HttpServletRequest req = authFailure(ErrorConstants.INVALID_AUTH_TOKEN, "The access token is invalid.", "Bearer");
+        HttpServletRequest req = authFailure(ErrorConstants.INVALID_AUTH_TOKEN,
+                "This access token is DPoP-bound and cannot be presented as a Bearer token.", "Bearer");
+        when(req.getAttribute(Constants.AUTH_DPOP_REQUIRED_ATTRIBUTE)).thenReturn(Boolean.TRUE);
         withAllowedAlgorithms();
 
         ResponseEntity<VCError> response = advice.handleVCIControllerExceptions(
                 new NotAuthenticatedException(ErrorConstants.INVALID_AUTH_TOKEN), req);
 
-        assertEquals("Bearer error=\"invalid_token\", error_description=\"The access token is invalid.\"",
+        assertEquals("Bearer error=\"invalid_token\", error_description=\"This access token is DPoP-bound and cannot be presented as a Bearer token.\"",
                 response.getHeaders().getFirst(HttpHeaders.WWW_AUTHENTICATE));
     }
 
