@@ -238,6 +238,12 @@ public class ExceptionHandlerAdvice extends ResponseEntityExceptionHandler imple
                 challenge.append(", ").append(Constants.SCHEME_DPOP).append(" algs=\"")
                         .append(quoteAuthParam(String.join(" ", algs)))
                         .append('"');
+            } else if(Boolean.TRUE.equals(request.getAttribute(Constants.AUTH_DPOP_BINDING_FAILED_ATTRIBUTE)) && !algs.isEmpty()) {
+                // A valid proof with a token not bound to its key: invalid_token, with algs
+                // still on the DPoP challenge (RFC 9449 §7.1, Figure 16).
+                challenge.append(", algs=\"")
+                        .append(quoteAuthParam(String.join(" ", algs)))
+                        .append('"');
             }
             headers.set(HttpHeaders.WWW_AUTHENTICATE, challenge.toString());
             return new ResponseEntity<>(getVCErrorDto(errorCode, description), headers, HttpStatus.UNAUTHORIZED);

@@ -28,6 +28,7 @@ import com.nimbusds.jose.jwk.gen.OctetKeyPairGenerator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 
+import io.mosip.certify.core.constants.Constants;
 import io.mosip.certify.core.constants.ErrorConstants;
 import io.mosip.certify.core.exception.CertifyException;
 import io.mosip.certify.core.util.CommonUtil;
@@ -310,7 +311,15 @@ class DpopProofValidatorTest {
     @Test
     void should_reject_when_accessTokenIsNotDpopBound() throws Exception {
         String proof = signProof(walletKey, defaultClaims().build(), walletKey.toPublicJWK(), "dpop+jwt", JWSAlgorithm.ES256);
-        assertInvalid(() -> validator.validate(proof, ACCESS_TOKEN, Map.of("sub", "user"), request), "not DPoP-bound");
+        assertTokenRejected(() -> validator.validate(proof, ACCESS_TOKEN, Map.of("sub", "user"), request),
+                "cnf claim is missing");
+    }
+
+    @Test
+    void should_rejectTheToken_when_cnfHasNoJkt() throws Exception {
+        String proof = signProof(walletKey, defaultClaims().build(), walletKey.toPublicJWK(), "dpop+jwt", JWSAlgorithm.ES256);
+        assertTokenRejected(() -> validator.validate(proof, ACCESS_TOKEN, Map.of("cnf", Map.of()), request),
+                "cnf.jkt is missing");
     }
 
     @Test
@@ -319,8 +328,33 @@ class DpopProofValidatorTest {
         ECKey otherKey = new ECKeyGenerator(Curve.P_256).generate();
         String otherJkt = otherKey.toPublicJWK().computeThumbprint().toString();
         String proof = signProof(walletKey, defaultClaims().build(), walletKey.toPublicJWK(), "dpop+jwt", JWSAlgorithm.ES256);
-        assertInvalid(() -> validator.validate(proof, ACCESS_TOKEN, boundClaims(otherJkt), request),
+        assertTokenRejected(() -> validator.validate(proof, ACCESS_TOKEN, boundClaims(otherJkt), request),
                 "does not match the access token binding");
+    }
+
+    @Test
+    void should_blameTheProof_when_jtiIsMissingAndTheTokenIsUnbound() throws Exception {
+        // Both are wrong, but the proof is checked first: invalid_token is only reported
+        // for a well-formed proof.
+        JWTClaimsSet claims = new JWTClaimsSet.Builder()
+                .issueTime(new Date())
+                .claim("htm", "POST")
+                .claim("htu", DOMAIN_URL + REQUEST_URI)
+                .claim("ath", CommonUtil.generateB64EncodedHash(CommonUtil.ALGO_SHA_256, ACCESS_TOKEN))
+                .build();
+        String proof = signProof(walletKey, claims, walletKey.toPublicJWK(), "dpop+jwt", JWSAlgorithm.ES256);
+        assertInvalid(() -> validator.validate(proof, ACCESS_TOKEN, Map.of("sub", "user"), request), "jti");
+        assertNull(request.getAttribute(Constants.AUTH_DPOP_BINDING_FAILED_ATTRIBUTE));
+    }
+
+    @Test
+    void should_notBurnJti_when_tokenBindingFails() throws Exception {
+        String proof = signProof(walletKey, defaultClaims().build(), walletKey.toPublicJWK(), "dpop+jwt", JWSAlgorithm.ES256);
+        assertTokenRejected(() -> validator.validate(proof, ACCESS_TOKEN, Map.of("sub", "user"), request),
+                "not DPoP-bound");
+
+        // The same proof, now with a token bound to its key, is still accepted.
+        assertDoesNotThrow(() -> validator.validate(proof, ACCESS_TOKEN, boundClaims(walletJkt), new MockHttpServletRequest("POST", REQUEST_URI)));
     }
 
     @Test
@@ -575,5 +609,14 @@ class DpopProofValidatorTest {
         assertEquals(ErrorConstants.INVALID_DPOP_PROOF, e.getErrorCode());
         assertTrue(e.getMessage().toLowerCase().contains(expectedMessageFragment.toLowerCase()),
                 "expected message to contain '" + expectedMessageFragment + "' but was: " + e.getMessage());
+    }
+
+    /** The proof passed every check, but the token is not bound to its key. */
+    private void assertTokenRejected(Runnable action, String expectedMessageFragment) {
+        CertifyException e = assertThrows(CertifyException.class, action::run);
+        assertEquals(ErrorConstants.INVALID_AUTH_TOKEN, e.getErrorCode());
+        assertTrue(e.getMessage().contains(expectedMessageFragment),
+                "expected message to contain '" + expectedMessageFragment + "' but was: " + e.getMessage());
+        assertEquals(Boolean.TRUE, request.getAttribute(Constants.AUTH_DPOP_BINDING_FAILED_ATTRIBUTE));
     }
 }

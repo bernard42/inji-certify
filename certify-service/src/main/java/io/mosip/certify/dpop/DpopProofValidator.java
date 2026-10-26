@@ -155,8 +155,10 @@ public class DpopProofValidator {
      * @param accessToken       the token from the Authorization header, verbatim
      * @param accessTokenClaims decoded claims of that token, for the {@code cnf.jkt} binding
      * @param request           the inbound request, for {@code htm} / {@code htu}
-     * @throws InvalidDpopHeaderException on any failure; returns normally when the proof
-     *         satisfies every rule in RFC 9449 section 4.3
+     * @throws InvalidDpopHeaderException on any failure of the proof itself; returns normally
+     *         when the proof satisfies every rule in RFC 9449 section 4.3
+     * @throws CertifyException with {@code invalid_token} when the proof is valid but the
+     *         access token is not bound to its key
      */
     public void validate(String dpopToken, String accessToken,
                                    Map<String, Object> accessTokenClaims, HttpServletRequest request) {
@@ -168,12 +170,14 @@ public class DpopProofValidator {
         verifyFreshness(claims);
         validateAthClaim(claims, accessToken);
 
-        String jkt = validateCnfClaim(jwk, accessTokenClaims);
-
         String jti = claims.getJWTID();
         if (jti == null || jti.isBlank()) {
             throw new InvalidDpopHeaderException("DPoP proof is missing the jti claim");
         }
+
+        // Every proof check has passed by now, so a binding failure is the token's fault.
+        String jkt = validateCnfClaim(jwk, accessTokenClaims, request);
+
         // Replay check runs last: a proof is only burned once everything else about it has
         // been accepted, so a rejected request cannot consume a valid jti.
         if (checkAndMarkJti(jkt, jti)) {
@@ -349,25 +353,34 @@ public class DpopProofValidator {
      * comparison depends on is derived where it is used. It is left until after the
      * {@code cnf} checks: a token with no binding at all is refused without hashing.
      *
+     * <p>A failure here is the token's, not the proof's, so it answers {@code invalid_token}
+     * (RFC 9449 §7.1, Figure 16) rather than {@code invalid_dpop_proof}.
+     *
      * @return the RFC 7638 thumbprint of the proof key, reused by the caller for the
      *         replay check and returned to the filter
      */
-    private String validateCnfClaim(JWK proofJwk, Map<String, Object> accessTokenClaims) {
+    private String validateCnfClaim(JWK proofJwk, Map<String, Object> accessTokenClaims, HttpServletRequest request) {
         Object cnf = accessTokenClaims == null ? null : accessTokenClaims.get(Constants.CONFIRMATION);
         if (!(cnf instanceof Map)) {
-            throw new InvalidDpopHeaderException("Access token is not DPoP-bound: cnf claim is missing");
+            throw bindingFailure(request, "Access token is not DPoP-bound: cnf claim is missing");
         }
         Object boundJkt = ((Map<?, ?>) cnf).get(Constants.JKT);
         if (!(boundJkt instanceof String) || ((String) boundJkt).isBlank()) {
-            throw new InvalidDpopHeaderException("Access token is not DPoP-bound: cnf.jkt is missing");
+            throw bindingFailure(request, "Access token is not DPoP-bound: cnf.jkt is missing");
         }
         String jkt = computeThumbprint(proofJwk);
         if (!MessageDigest.isEqual(((String) boundJkt).getBytes(StandardCharsets.UTF_8),
                 jkt.getBytes(StandardCharsets.UTF_8))) {
             log.error("cnf claim validation failed");
-            throw new InvalidDpopHeaderException("DPoP proof key does not match the access token binding");
+            throw bindingFailure(request, "DPoP proof key does not match the access token binding");
         }
         return jkt;
+    }
+
+    /** Marks the request so the handler advice keeps {@code algs} on the DPoP challenge. */
+    private CertifyException bindingFailure(HttpServletRequest request, String description) {
+        request.setAttribute(Constants.AUTH_DPOP_BINDING_FAILED_ATTRIBUTE, Boolean.TRUE);
+        return new CertifyException(ErrorConstants.INVALID_AUTH_TOKEN, description);
     }
 
     /**
