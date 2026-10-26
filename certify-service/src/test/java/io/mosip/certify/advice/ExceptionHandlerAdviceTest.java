@@ -151,7 +151,7 @@ public class ExceptionHandlerAdviceTest {
         // must stay well-formed either way.
         DpopProofValidator validator = new DpopProofValidator(Mockito.mock(CacheManager.class));
         ReflectionTestUtils.setField(validator, "allowedAlgorithms", List.of("ES256", "RS\"256"));
-        ReflectionTestUtils.setField(advice, "dpopProofValidator", validator);
+        advice = new ExceptionHandlerAdvice(messageSource, validator);
 
         ResponseEntity<VCError> response = advice.handleVCIControllerExceptions(
                 new NotAuthenticatedException(ErrorConstants.INVALID_DPOP_PROOF), req);
@@ -268,9 +268,9 @@ public class ExceptionHandlerAdviceTest {
     }
 
     private void withAllowedAlgorithms(String... algs) {
-        DpopProofValidator validator = new DpopProofValidator();
+        DpopProofValidator validator = new DpopProofValidator(Mockito.mock(CacheManager.class));
         ReflectionTestUtils.setField(validator, "allowedAlgorithms", List.of(algs));
-        ReflectionTestUtils.setField(advice, "dpopProofValidator", validator);
+        advice = new ExceptionHandlerAdvice(messageSource, validator);
     }
 
     // ---- folded from ExceptionHandlerAdviceExtraTest ----
