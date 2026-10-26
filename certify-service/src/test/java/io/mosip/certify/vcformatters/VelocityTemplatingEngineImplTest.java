@@ -29,7 +29,6 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -46,7 +45,6 @@ import lombok.SneakyThrows;
 
 @RunWith(MockitoJUnitRunner.class)
 public class VelocityTemplatingEngineImplTest {
-    @InjectMocks
     private VelocityTemplatingEngineImpl formatter;
     @Mock
     CredentialConfigRepository credentialConfigRepository;
@@ -147,7 +145,7 @@ public class VelocityTemplatingEngineImplTest {
         );
 
 
-        ReflectionTestUtils.setField(formatter, "objectMapper", new ObjectMapper());
+        formatter = new VelocityTemplatingEngineImpl(credentialConfigRepository, renderingTemplateService, new ObjectMapper());
         ReflectionTestUtils.setField(formatter, "defaultExpiryDuration", "P730d");
         ReflectionTestUtils.setField(formatter, "idPrefix", "uurn:uuid:");
 
