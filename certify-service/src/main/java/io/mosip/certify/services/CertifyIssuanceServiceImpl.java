@@ -36,6 +36,7 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -53,6 +54,10 @@ import static io.mosip.certify.utils.VCIssuanceUtil.getScopeCredentialMapping;
 @Slf4j
 @Service
 @ConditionalOnProperty(value = "mosip.certify.plugin-mode", havingValue = "DataProvider")
+// Only one VCIssuanceService exists at runtime: this one or VCIssuanceServiceImpl, picked by
+// mosip.certify.plugin-mode. @Primary changes nothing then; it tells static analysis, which does
+// not evaluate the condition, which bean an injection of VCIssuanceService resolves to.
+@Primary
 public class CertifyIssuanceServiceImpl implements VCIssuanceService {
 
     private final ParsedAccessToken parsedAccessToken;
