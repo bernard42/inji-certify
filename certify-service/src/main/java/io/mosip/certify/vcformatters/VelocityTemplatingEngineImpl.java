@@ -243,7 +243,15 @@ public class VelocityTemplatingEngineImpl implements VCFormatter {
                         CredentialUtils.getDigestMultibase(renderingTemplateService.getTemplate(
                                 (String) updatedTemplateParams.get(Constants.RENDERING_TEMPLATE_ID)).getTemplate()));
             } catch (RenderingTemplateException e) {
-                log.error("Template: " + updatedTemplateParams.get(Constants.RENDERING_TEMPLATE_ID) + " not available in DB", e);
+                String configuredRenderTemplateId = (String) updatedTemplateParams.get(Constants.RENDERING_TEMPLATE_ID);
+                if (vcTemplateString.contains("_renderMethodSVGdigest")) {
+                    log.error("Rendering template id '{}' configured in mosip.certify.data-provider-plugin.rendering-template-id " +
+                            "was not found in the rendering_template table.", configuredRenderTemplateId, e);
+                    throw new CertifyException(ErrorConstants.INVALID_TEMPLATE_ID,
+                            "The rendering template configured for this credential is not available.");
+                }
+                log.warn("Rendering template id '{}' was not found in the rendering_template table, but the template " +
+                        "does not use ${_renderMethodSVGdigest}; continuing.", configuredRenderTemplateId);
             }
         }
         VelocityContext context = new VelocityContext(updatedTemplateParams);
