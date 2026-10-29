@@ -226,7 +226,8 @@ public class AccessTokenValidationFilter extends OncePerRequestFilter {
      * issuance path today, so a filter URL added outside it needs the advice extended too.
      */
     private void rejectDpopSchemeWhenDisabled(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        log.error("DPoP authorization scheme presented, but DPoP is disabled on this deployment");
+        // The caller's mistake, not this deployment's, so it is not logged as an error.
+        log.warn("DPoP authorization scheme presented, but DPoP is disabled on this deployment");
         request.setAttribute(Constants.AUTH_SCHEME_ATTRIBUTE, Constants.SCHEME_BEARER);
         request.setAttribute(Constants.AUTH_ERROR_ATTRIBUTE, AuthErrorMessages.ERROR_DPOP_NOT_SUPPORTED);
         request.setAttribute(Constants.AUTH_ERROR_CODE_ATTRIBUTE, ErrorConstants.INVALID_AUTH_TOKEN);
