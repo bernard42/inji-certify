@@ -54,9 +54,9 @@ import static io.mosip.certify.utils.VCIssuanceUtil.getScopeCredentialMapping;
 @Slf4j
 @Service
 @ConditionalOnProperty(value = "mosip.certify.plugin-mode", havingValue = "DataProvider")
-// Only one VCIssuanceService exists at runtime: this one or VCIssuanceServiceImpl, picked by
-// mosip.certify.plugin-mode. @Primary changes nothing then; it tells static analysis, which does
-// not evaluate the condition, which bean an injection of VCIssuanceService resolves to.
+// Both VCIssuanceService implementations are always on the classpath, but only one bean is
+// created per deployment, chosen by mosip.certify.plugin-mode. @Primary has no runtime effect;
+// it only tells static analysis like Sonar (which can't evaluate the condition) which bean to expect.
 @Primary
 public class CertifyIssuanceServiceImpl implements VCIssuanceService {
 
