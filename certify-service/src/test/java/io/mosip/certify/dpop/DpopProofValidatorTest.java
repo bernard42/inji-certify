@@ -28,9 +28,9 @@ import com.nimbusds.jose.jwk.gen.OctetKeyPairGenerator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 
-import io.mosip.certify.core.constants.Constants;
 import io.mosip.certify.core.constants.ErrorConstants;
 import io.mosip.certify.core.exception.CertifyException;
+import io.mosip.certify.core.exception.DpopBindingException;
 import io.mosip.certify.core.util.CommonUtil;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -344,7 +344,6 @@ class DpopProofValidatorTest {
                 .build();
         String proof = signProof(walletKey, claims, walletKey.toPublicJWK(), "dpop+jwt", JWSAlgorithm.ES256);
         assertInvalid(() -> validator.validate(proof, ACCESS_TOKEN, Map.of("sub", "user"), request), "jti");
-        assertNull(request.getAttribute(Constants.AUTH_DPOP_BINDING_FAILED_ATTRIBUTE));
     }
 
     @Test
@@ -613,10 +612,10 @@ class DpopProofValidatorTest {
 
     /** The proof passed every check, but the token is not bound to its key. */
     private void assertTokenRejected(Runnable action, String expectedMessageFragment) {
-        CertifyException e = assertThrows(CertifyException.class, action::run);
+        // The filter keys algs off this type, so a plain CertifyException would not do.
+        DpopBindingException e = assertThrows(DpopBindingException.class, action::run);
         assertEquals(ErrorConstants.INVALID_AUTH_TOKEN, e.getErrorCode());
         assertTrue(e.getMessage().contains(expectedMessageFragment),
                 "expected message to contain '" + expectedMessageFragment + "' but was: " + e.getMessage());
-        assertEquals(Boolean.TRUE, request.getAttribute(Constants.AUTH_DPOP_BINDING_FAILED_ATTRIBUTE));
     }
 }

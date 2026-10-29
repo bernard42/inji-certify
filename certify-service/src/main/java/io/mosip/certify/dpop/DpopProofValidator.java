@@ -34,6 +34,7 @@ import com.nimbusds.jwt.SignedJWT;
 import io.mosip.certify.core.constants.Constants;
 import io.mosip.certify.core.constants.ErrorConstants;
 import io.mosip.certify.core.exception.CertifyException;
+import io.mosip.certify.core.exception.DpopBindingException;
 import io.mosip.certify.core.exception.InvalidDpopHeaderException;
 import io.mosip.certify.core.util.CommonUtil;
 import jakarta.annotation.PostConstruct;
@@ -157,8 +158,8 @@ public class DpopProofValidator {
      * @param request           the inbound request, for {@code htm} / {@code htu}
      * @throws InvalidDpopHeaderException on any failure of the proof itself; returns normally
      *         when the proof satisfies every rule in RFC 9449 section 4.3
-     * @throws CertifyException with {@code invalid_token} when the proof is valid but the
-     *         access token is not bound to its key
+     * @throws DpopBindingException when the proof is valid but the access token is not
+     *         bound to its key
      */
     public void validate(String dpopToken, String accessToken,
                                    Map<String, Object> accessTokenClaims, HttpServletRequest request) {
@@ -176,7 +177,7 @@ public class DpopProofValidator {
         }
 
         // Every proof check has passed by now, so a binding failure is the token's fault.
-        String jkt = validateCnfClaim(jwk, accessTokenClaims, request);
+        String jkt = validateCnfClaim(jwk, accessTokenClaims);
 
         // Replay check runs last: a proof is only burned once everything else about it has
         // been accepted, so a rejected request cannot consume a valid jti.
@@ -359,28 +360,22 @@ public class DpopProofValidator {
      * @return the RFC 7638 thumbprint of the proof key, reused by the caller for the
      *         replay check and returned to the filter
      */
-    private String validateCnfClaim(JWK proofJwk, Map<String, Object> accessTokenClaims, HttpServletRequest request) {
+    private String validateCnfClaim(JWK proofJwk, Map<String, Object> accessTokenClaims) {
         Object cnf = accessTokenClaims == null ? null : accessTokenClaims.get(Constants.CONFIRMATION);
         if (!(cnf instanceof Map)) {
-            throw bindingFailure(request, "Access token is not DPoP-bound: cnf claim is missing");
+            throw new DpopBindingException("Access token is not DPoP-bound: cnf claim is missing");
         }
         Object boundJkt = ((Map<?, ?>) cnf).get(Constants.JKT);
         if (!(boundJkt instanceof String) || ((String) boundJkt).isBlank()) {
-            throw bindingFailure(request, "Access token is not DPoP-bound: cnf.jkt is missing");
+            throw new DpopBindingException("Access token is not DPoP-bound: cnf.jkt is missing");
         }
         String jkt = computeThumbprint(proofJwk);
         if (!MessageDigest.isEqual(((String) boundJkt).getBytes(StandardCharsets.UTF_8),
                 jkt.getBytes(StandardCharsets.UTF_8))) {
             log.error("cnf claim validation failed");
-            throw bindingFailure(request, "DPoP proof key does not match the access token binding");
+            throw new DpopBindingException("DPoP proof key does not match the access token binding");
         }
         return jkt;
-    }
-
-    /** Marks the request so the handler advice keeps {@code algs} on the DPoP challenge. */
-    private CertifyException bindingFailure(HttpServletRequest request, String description) {
-        request.setAttribute(Constants.AUTH_DPOP_BINDING_FAILED_ATTRIBUTE, Boolean.TRUE);
-        return new CertifyException(ErrorConstants.INVALID_AUTH_TOKEN, description);
     }
 
     /**
