@@ -28,6 +28,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 
+import io.mosip.certify.core.constants.AuthErrorMessages;
 import io.mosip.certify.core.constants.Constants;
 import io.mosip.certify.core.constants.ErrorConstants;
 import io.mosip.certify.core.exception.CertifyException;
@@ -53,9 +54,7 @@ public class AccessTokenValidationFilter extends OncePerRequestFilter {
     static final String ERROR_EXPIRED_TOKEN = "The access token has expired.";
     static final String INVALID_TOKEN_TYPE = "Authorization header with a Bearer or DPoP token is required.";
     static final String ERROR_MISSING_DPOP_PROOF = "A DPoP header is required when using the DPoP authorization scheme.";
-    static final String ERROR_TOKEN_REQUIRES_DPOP = "This access token is DPoP-bound and cannot be presented as a Bearer token.";
     static final String ERROR_MULTIPLE_DPOP_PROOFS = "Exactly one DPoP header is allowed.";
-    static final String ERROR_DPOP_NOT_SUPPORTED = "DPoP is not supported by this deployment. Use a Bearer token.";
 
     private static final String BEARER_PREFIX = Constants.SCHEME_BEARER + " ";
     private static final String DPOP_PREFIX = Constants.SCHEME_DPOP + " ";
@@ -229,15 +228,16 @@ public class AccessTokenValidationFilter extends OncePerRequestFilter {
     private void rejectDpopSchemeWhenDisabled(HttpServletRequest request, HttpServletResponse response) throws IOException {
         log.error("DPoP authorization scheme presented, but DPoP is disabled on this deployment");
         request.setAttribute(Constants.AUTH_SCHEME_ATTRIBUTE, Constants.SCHEME_BEARER);
-        request.setAttribute(Constants.AUTH_ERROR_ATTRIBUTE, ERROR_DPOP_NOT_SUPPORTED);
+        request.setAttribute(Constants.AUTH_ERROR_ATTRIBUTE, AuthErrorMessages.ERROR_DPOP_NOT_SUPPORTED);
         request.setAttribute(Constants.AUTH_ERROR_CODE_ATTRIBUTE, ErrorConstants.INVALID_AUTH_TOKEN);
         parsedAccessToken.setActive(false);
         if (handlerExceptionResolver.resolveException(request, response, null, new NotAuthenticatedException()) == null) {
             // No resolver took the exception. The chain is not run, so without this the
             // caller would be answered an empty 200.
             response.setHeader(HttpHeaders.WWW_AUTHENTICATE, Constants.SCHEME_BEARER
-                    + " error=\"" + ErrorConstants.INVALID_AUTH_TOKEN + "\", error_description=\"" + ERROR_DPOP_NOT_SUPPORTED + "\"");
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, ERROR_DPOP_NOT_SUPPORTED);
+                    + " error=\"" + ErrorConstants.INVALID_AUTH_TOKEN + "\""
+                    + ", error_description=\"" + AuthErrorMessages.ERROR_DPOP_NOT_SUPPORTED + "\"");
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, AuthErrorMessages.ERROR_DPOP_NOT_SUPPORTED);
         }
     }
 
@@ -309,7 +309,7 @@ public class AccessTokenValidationFilter extends OncePerRequestFilter {
             // The one Bearer failure the client can fix by switching to DPoP, so the advice
             // tells it how - no other 401 carries the DPoP challenge.
             request.setAttribute(Constants.AUTH_DPOP_REQUIRED_ATTRIBUTE, Boolean.TRUE);
-            throw new CertifyException(ErrorConstants.INVALID_AUTH_TOKEN, ERROR_TOKEN_REQUIRES_DPOP);
+            throw new CertifyException(ErrorConstants.INVALID_AUTH_TOKEN, AuthErrorMessages.ERROR_TOKEN_REQUIRES_DPOP);
         }
     }
 

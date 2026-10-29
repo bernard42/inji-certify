@@ -2,6 +2,7 @@ package io.mosip.certify.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.mosip.certify.api.spi.AuditPlugin;
+import io.mosip.certify.core.constants.AuthErrorMessages;
 import io.mosip.certify.core.constants.ErrorConstants;
 import io.mosip.certify.core.dto.CredentialRequest;
 import io.mosip.certify.core.dto.ParsedAccessToken;
@@ -43,7 +44,6 @@ public class VCIssuanceControllerDpopDisabledTest {
     // The filter runs only for the URIs in mosip.certify.authn.filter-urls, which carry the
     // servlet path. A request to /issuance/credential alone would skip it.
     private static final String CREDENTIAL_URI = "/v1/certify/issuance/credential";
-    private static final String DPOP_NOT_SUPPORTED = "DPoP is not supported by this deployment. Use a Bearer token.";
 
     ObjectMapper objectMapper = new ObjectMapper();
 
@@ -76,9 +76,9 @@ public class VCIssuanceControllerDpopDisabledTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value(ErrorConstants.INVALID_AUTH_TOKEN))
-                .andExpect(jsonPath("$.error_description").value(DPOP_NOT_SUPPORTED))
+                .andExpect(jsonPath("$.error_description").value(AuthErrorMessages.ERROR_DPOP_NOT_SUPPORTED))
                 .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE,
-                        "Bearer error=\"invalid_token\", error_description=\"" + DPOP_NOT_SUPPORTED + "\""));
+                        "Bearer error=\"invalid_token\", error_description=\"" + AuthErrorMessages.ERROR_DPOP_NOT_SUPPORTED + "\""));
 
         // Refused at the filter: the controller never ran.
         verifyNoInteractions(vcIssuanceService);

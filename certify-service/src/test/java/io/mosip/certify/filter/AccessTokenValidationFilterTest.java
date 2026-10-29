@@ -1,5 +1,6 @@
 package io.mosip.certify.filter;
 
+import io.mosip.certify.core.constants.AuthErrorMessages;
 import io.mosip.certify.core.constants.Constants;
 import io.mosip.certify.core.constants.ErrorConstants;
 import ch.qos.logback.classic.Logger;
@@ -332,7 +333,7 @@ class AccessTokenValidationFilterTest {
         filter.doFilterInternal(request, response, filterChain);
 
         verify(parsedAccessToken).setActive(false);
-        assertEquals(AccessTokenValidationFilter.ERROR_TOKEN_REQUIRES_DPOP,
+        assertEquals(AuthErrorMessages.ERROR_TOKEN_REQUIRES_DPOP,
                 request.getAttribute(Constants.AUTH_ERROR_ATTRIBUTE));
         // No proof took part, so the token error applies, not the proof error.
         assertEquals(ErrorConstants.INVALID_AUTH_TOKEN,
@@ -390,7 +391,7 @@ class AccessTokenValidationFilterTest {
         verify(filterChain, never()).doFilter(any(), any());
         verifyNoInteractions(jwtDecoder);
         verify(parsedAccessToken).setActive(false);
-        assertEquals(AccessTokenValidationFilter.ERROR_DPOP_NOT_SUPPORTED,
+        assertEquals(AuthErrorMessages.ERROR_DPOP_NOT_SUPPORTED,
                 request.getAttribute(Constants.AUTH_ERROR_ATTRIBUTE));
         assertEquals(ErrorConstants.INVALID_AUTH_TOKEN, request.getAttribute(Constants.AUTH_ERROR_CODE_ATTRIBUTE));
         // A DPoP retry can never succeed here, so the challenge must not invite one.
@@ -413,9 +414,9 @@ class AccessTokenValidationFilterTest {
 
         verify(filterChain, never()).doFilter(any(), any());
         assertEquals(401, response.getStatus());
-        assertEquals(AccessTokenValidationFilter.ERROR_DPOP_NOT_SUPPORTED, response.getErrorMessage());
+        assertEquals(AuthErrorMessages.ERROR_DPOP_NOT_SUPPORTED, response.getErrorMessage());
         assertEquals("Bearer error=\"invalid_token\", error_description=\""
-                        + AccessTokenValidationFilter.ERROR_DPOP_NOT_SUPPORTED + "\"",
+                        + AuthErrorMessages.ERROR_DPOP_NOT_SUPPORTED + "\"",
                 response.getHeader(HttpHeaders.WWW_AUTHENTICATE));
     }
 
@@ -451,7 +452,7 @@ class AccessTokenValidationFilterTest {
         filter.doFilterInternal(request, response, filterChain);
 
         verify(parsedAccessToken).setActive(false);
-        assertEquals(AccessTokenValidationFilter.ERROR_TOKEN_REQUIRES_DPOP,
+        assertEquals(AuthErrorMessages.ERROR_TOKEN_REQUIRES_DPOP,
                 request.getAttribute(Constants.AUTH_ERROR_ATTRIBUTE));
         assertEquals(ErrorConstants.INVALID_AUTH_TOKEN, request.getAttribute(Constants.AUTH_ERROR_CODE_ATTRIBUTE));
         assertEquals(Constants.SCHEME_BEARER, request.getAttribute(Constants.AUTH_SCHEME_ATTRIBUTE));
