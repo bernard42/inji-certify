@@ -114,24 +114,24 @@ least `proof-max-age + 2 × clock-skew`, or a proof stays replayable after its j
 Replay is checked last, so a request rejected for any other reason does not burn a valid jti.
 
 `mosip.certify.dpop.enabled` (default `true`) switches the DPoP path off. Only `true` or `false` (any case) is accepted:
-`AccessTokenValidationFilter` fails startup on any other value, because `DpopProofValidator` is `@ConditionalOnProperty`
-on it, a string match that would read `yes`, `1` or a typo as disabled. The filter and `ExceptionHandlerAdvice` treat
-the absent bean as disabled. When disabled, a `DPoP`-scheme request is refused at the start of the filter, before the
-token is decoded or the request reaches a controller, and answered through `HandlerExceptionResolver` with
-`401 invalid_token` and a Bearer challenge with no `algs`. The downgrade guard still refuses a DPoP-bound token
-presented as Bearer.
+`DpopEnabledPropertyCheck` fails startup on any other value, under every profile, because `DpopProofValidator` is
+`@ConditionalOnProperty` on it, a string match that would read `yes`, `1` or a typo as disabled. The filter and
+`ExceptionHandlerAdvice` treat the absent bean as disabled. When disabled, a `DPoP`-scheme request is refused at the
+start of the filter, before the token is decoded or the request reaches a controller, and answered through
+`HandlerExceptionResolver` with `401 invalid_token` and a Bearer challenge with no `algs`. The downgrade guard still
+refuses a DPoP-bound token presented as Bearer.
 
 Certify does not issue DPoP-bound tokens — the authorization server does. eSignet stamps `cnf.jkt` only for clients
 registered with `additionalConfig.dpop_bound_access_tokens: true`, and that arrived in eSignet **1.8**; against an older
 build every DPoP path fails by construction because no token carries the claim.
 
-Apart from the disabled-mode DPoP rejection above, which always challenges with `Bearer`, failures answer `401` with
-a `WWW-Authenticate` challenge **in the scheme the caller used**, carrying `error` and `error_description`. The `algs`
+Apart from the disabled-mode DPoP rejection above, which always challenges with `Bearer`, failures answer `401` with a
+`WWW-Authenticate` challenge **in the scheme the caller used**, carrying `error` and `error_description`. The `algs`
 list is a DPoP parameter and appears in two cases only: on the DPoP challenge for `invalid_dpop_proof`, and, when a
 DPoP-bound token is presented as Bearer, on a separate error-free `DPoP algs="..."` challenge after the Bearer one
-(RFC 9449 section 7.2, Figure 18). Every other 401 carries no `algs`, and with DPoP disabled no challenge does. The
-description names the failing claim, so a wallet developer is told which check rejected the proof rather than a bare
-`invalid_dpop_proof`.
+(RFC 9449 section 7.2, Figure 18). Every other 401 carries no `algs`, and with DPoP disabled, no challenge contains
+`algs`. The description names the failing claim, so a wallet developer is told which check rejected the proof rather
+than a bare `invalid_dpop_proof`.
 
 `invalid_dpop_proof` is reserved for a proof that fails the checks of RFC 9449 section 4.3. The downgrade guard answers
 `invalid_token`, because no proof took part in that request.

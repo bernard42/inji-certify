@@ -71,9 +71,6 @@ public class AccessTokenValidationFilter extends OncePerRequestFilter {
     @Value("#{${mosip.certify.authn.filter-urls}}")
     private List<String> urlPatterns;
 
-    @Value("${mosip.certify.dpop.enabled:true}")
-    private String dpopEnabled;
-
     private final ParsedAccessToken parsedAccessToken;
 
     /**
@@ -101,12 +98,6 @@ public class AccessTokenValidationFilter extends OncePerRequestFilter {
 
     @PostConstruct
     public void logDpopMode() {
-        // DpopProofValidator's @ConditionalOnProperty is a string match, so yes, on, 1 or a
-        // typo would quietly turn DPoP off. Refuse to start rather than run in a mode nobody chose.
-        if (!"true".equalsIgnoreCase(dpopEnabled) && !"false".equalsIgnoreCase(dpopEnabled)) {
-            throw new IllegalStateException(
-                    "mosip.certify.dpop.enabled must be true or false, but was '" + dpopEnabled + "'");
-        }
         if (isDpopEnabled()) {
             log.info("DPoP support is enabled: access tokens are accepted under the Bearer and DPoP schemes");
         } else {

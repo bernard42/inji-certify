@@ -84,7 +84,6 @@ class AccessTokenValidationFilterTest {
         ReflectionTestUtils.setField(filter, "allowedAudiences", Arrays.asList("test-client"));
         ReflectionTestUtils.setField(filter, "urlPatterns", Arrays.asList("/api/v1/test", "/api/v1/secured"));
         ReflectionTestUtils.setField(filter, "nimbusJwtDecoder", jwtDecoder);
-        ReflectionTestUtils.setField(filter, "dpopEnabled", "true");
     }
 
     @Test
@@ -493,30 +492,10 @@ class AccessTokenValidationFilterTest {
         assertTrue(messages.get(1).startsWith("DPoP support is disabled"));
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"yes", "on", "1", "ture", "", "true "})
-    public void should_failStartup_when_dpopEnabledIsNeitherTrueNorFalse(String value) {
-        // Each of these would silently disable DPoP through the validator's string match.
-        ReflectionTestUtils.setField(filter, "dpopEnabled", value);
-
-        IllegalStateException e = assertThrows(IllegalStateException.class, filter::logDpopMode);
-        assertEquals("mosip.certify.dpop.enabled must be true or false, but was '" + value + "'", e.getMessage());
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"true", "TRUE", "false", "False"})
-    public void should_start_when_dpopEnabledIsTrueOrFalseInAnyCase(String value) {
-        // @ConditionalOnProperty ignores case too, so these all pick the mode they name.
-        ReflectionTestUtils.setField(filter, "dpopEnabled", value);
-
-        assertDoesNotThrow(filter::logDpopMode);
-    }
-
     /** The validator is absent from the context when mosip.certify.dpop.enabled is false. */
     private void disableDpop() {
         filter = new AccessTokenValidationFilter(parsedAccessToken, null, handlerExceptionResolver);
         configure(filter);
-        ReflectionTestUtils.setField(filter, "dpopEnabled", "false");
     }
 
     private Map<String, Object> createValidClaims() {
