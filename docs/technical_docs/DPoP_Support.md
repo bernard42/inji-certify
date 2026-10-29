@@ -154,7 +154,7 @@ WWW-Authenticate: DPoP error="invalid_dpop_proof", error_description="DPoP proof
 | `mosip.certify.dpop.clock-skew` | Tolerance for device clock drift, applied on both sides of the freshness window. | `10` |
 | `mosip.certify.dpop.jti.cache-expire-seconds` | `jti` replay-cache TTL. **Must exceed** `proof-max-age + 2 * clock-skew`, or an evicted `jti` leaves its proof replayable. Certify refuses to start if the resulting `dpopJti` TTL is below this bound. | `120` |
 | `mosip.certify.cache.names` | Must include `dpopJti` for the replay cache to exist. | `...,dpopJti` |
-| `mosip.certify.cache.expire-in-seconds` | Per-cache TTL map; must include a `dpopJti` entry (wired to `mosip.certify.dpop.jti.cache-expire-seconds`), otherwise startup fails and the TTL rule above is never applied. | `{..., 'dpopJti': ${mosip.certify.dpop.jti.cache-expire-seconds}}` |
+| `mosip.certify.cache.expire-in-seconds` | Per-cache TTL map; must include a `dpopJti` entry (wired to `mosip.certify.dpop.jti.cache-expire-seconds`, with `120` as the fallback so a Bearer-only deployment can leave that property out), otherwise startup fails and the TTL rule above is never applied. | `{..., 'dpopJti': ${mosip.certify.dpop.jti.cache-expire-seconds:120}}` |
 | `mosip.certify.cache.size` | Per-cache max-entries map for the `simple` (in-memory) cache. Size `dpopJti` to hold **every proof accepted within its TTL** — size-based eviction can drop a still-fresh `jti` before its TTL expires, letting a captured proof pass the replay check. Bound it for the expected proof rate, or use a cache whose policy guarantees TTL retention (e.g. Redis). | `{..., 'dpopJti': 10000}` |
 
 ---
