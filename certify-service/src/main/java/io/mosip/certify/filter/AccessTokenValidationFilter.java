@@ -9,10 +9,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
+import org.springframework.lang.Nullable;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
@@ -71,26 +71,30 @@ public class AccessTokenValidationFilter extends OncePerRequestFilter {
     @Value("#{${mosip.certify.authn.filter-urls}}")
     private List<String> urlPatterns;
 
-    @Autowired
-    private ParsedAccessToken parsedAccessToken;
+    private final ParsedAccessToken parsedAccessToken;
 
     /**
      * Present only when {@code mosip.certify.dpop.enabled} is true, the default. Its
      * absence is what switches this filter to Bearer-only: the validator is conditional on
      * that property, so a null here means DPoP is disabled for this deployment.
      */
-    @Autowired(required = false)
-    private DpopProofValidator dpopProofValidator;
+    private final DpopProofValidator dpopProofValidator;
 
     /**
      * Answers a request rejected before it reaches a controller, so the response goes
      * through {@code ExceptionHandlerAdvice} like every other authentication failure.
      */
-    @Autowired
-    @Qualifier("handlerExceptionResolver")
-    private HandlerExceptionResolver handlerExceptionResolver;
+    private final HandlerExceptionResolver handlerExceptionResolver;
 
     private NimbusJwtDecoder nimbusJwtDecoder;
+
+    public AccessTokenValidationFilter(ParsedAccessToken parsedAccessToken,
+                                       @Nullable DpopProofValidator dpopProofValidator,
+                                       @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver) {
+        this.parsedAccessToken = parsedAccessToken;
+        this.dpopProofValidator = dpopProofValidator;
+        this.handlerExceptionResolver = handlerExceptionResolver;
+    }
 
     @PostConstruct
     public void logDpopMode() {
@@ -174,8 +178,8 @@ public class AccessTokenValidationFilter extends OncePerRequestFilter {
 
                 } catch (CertifyException e) {
                     // Scheme-binding failures already carry a precise, caller-safe description.
-                    // The code travels with it so the handler advice can answer invalid_dpop_proof
-                    // or server_error rather than a generic invalid_token.
+                    // The code travels with it so the handler advice can answer invalid_token,
+                    // invalid_dpop_proof or server_error.
                     log.error("{} access token rejected with {}: {}", scheme, e.getErrorCode(), e.getMessage());
                     request.setAttribute(Constants.AUTH_ERROR_ATTRIBUTE, e.getMessage());
                     request.setAttribute(Constants.AUTH_ERROR_CODE_ATTRIBUTE, e.getErrorCode());
@@ -281,7 +285,10 @@ public class AccessTokenValidationFilter extends OncePerRequestFilter {
             dpopProofValidator.validate(dpopToken, token, jwt.getClaims(), request);
 
         } else if (isDpopBoundAccessToken(jwt.getClaims())) {
-            throw new InvalidDpopHeaderException(ERROR_TOKEN_REQUIRES_DPOP);
+            // The one Bearer failure the client can fix by switching to DPoP, so the advice
+            // tells it how - no other 401 carries the DPoP challenge.
+            request.setAttribute(Constants.AUTH_DPOP_REQUIRED_ATTRIBUTE, Boolean.TRUE);
+            throw new CertifyException(ErrorConstants.INVALID_AUTH_TOKEN, ERROR_TOKEN_REQUIRES_DPOP);
         }
     }
 

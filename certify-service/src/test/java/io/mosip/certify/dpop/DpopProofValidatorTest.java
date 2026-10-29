@@ -50,13 +50,11 @@ class DpopProofValidatorTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        validator = new DpopProofValidator();
+        validator = new DpopProofValidator(new ConcurrentMapCacheManager(DpopProofValidator.DPOP_JTI_CACHE));
         ReflectionTestUtils.setField(validator, "domainUrl", DOMAIN_URL);
         ReflectionTestUtils.setField(validator, "allowedAlgorithms", Arrays.asList("ES256", "RS256", "PS256", "EdDSA"));
         ReflectionTestUtils.setField(validator, "proofMaxAgeSeconds", 60L);
         ReflectionTestUtils.setField(validator, "maxClockSkewSeconds", 10L);
-        ReflectionTestUtils.setField(validator, "cacheManager",
-                new ConcurrentMapCacheManager(DpopProofValidator.DPOP_JTI_CACHE));
         ReflectionTestUtils.setField(validator, "cacheType", "simple");
 
         request = new MockHttpServletRequest();
@@ -401,11 +399,10 @@ class DpopProofValidatorTest {
     void should_failClosed_when_replayCacheIsMissing() {
         // A cache manager that knows nothing about dpopJti - the exact situation when the
         // cache name is left out of mosip.certify.cache.names.
-        ReflectionTestUtils.setField(validator, "cacheManager",
-                new ConcurrentMapCacheManager("someOtherCache"));
+        DpopProofValidator withoutJtiCache = new DpopProofValidator(new ConcurrentMapCacheManager("someOtherCache"));
 
         CertifyException e = assertThrows(CertifyException.class,
-                () -> validator.checkAndMarkJti(walletJkt, "jti-1"));
+                () -> withoutJtiCache.checkAndMarkJti(walletJkt, "jti-1"));
         assertEquals(ErrorConstants.SERVER_ERROR, e.getErrorCode(),
                 "a missing cache is this deployment's fault, not the proof's");
         assertFalse(e.getMessage().contains("mosip.certify"),

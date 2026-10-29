@@ -13,7 +13,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.Cache;
@@ -84,8 +83,7 @@ public class DpopProofValidator {
      */
     static final String ERROR_SERVER_MISCONFIGURED = "The DPoP proof could not be validated due to a server configuration error.";
 
-    @Autowired
-    private CacheManager cacheManager;
+    private final CacheManager cacheManager;
 
     /**
      * Public address of this issuer, as advertised in the credential issuer metadata.
@@ -155,6 +153,10 @@ public class DpopProofValidator {
      */
     @Value("#{${mosip.certify.cache.expire-in-seconds:{:}}}")
     private Map<String, Integer> cacheExpireInSeconds;
+
+    public DpopProofValidator(CacheManager cacheManager) {
+        this.cacheManager = cacheManager;
+    }
 
     /**
      * @param dpopToken         the proof JWT, verbatim from the {@code DPoP} request header

@@ -10,10 +10,10 @@ import io.mosip.certify.core.util.CommonUtil;
 import io.mosip.certify.dpop.DpopProofValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.TypeMismatchException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.context.NoSuchMessageException;
 import org.springframework.http.HttpHeaders;
+import org.springframework.lang.Nullable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -53,8 +53,7 @@ import static io.mosip.certify.core.constants.VCIErrorConstants.INVALID_REQUEST;
 @ControllerAdvice
 public class ExceptionHandlerAdvice extends ResponseEntityExceptionHandler implements AccessDeniedHandler {
 
-    @Autowired
-    MessageSource messageSource;
+    private final MessageSource messageSource;
 
     /**
      * Source of the {@code algs} parameter advertised in a DPoP challenge (RFC 9449
@@ -68,8 +67,12 @@ public class ExceptionHandlerAdvice extends ResponseEntityExceptionHandler imple
      * not advertise DPoP algorithms; an advice built outside a Spring context likewise
      * answers without the {@code algs} hint.
      */
-    @Autowired(required = false)
-    private DpopProofValidator dpopProofValidator;
+    private final DpopProofValidator dpopProofValidator;
+
+    public ExceptionHandlerAdvice(MessageSource messageSource, @Nullable DpopProofValidator dpopProofValidator) {
+        this.messageSource = messageSource;
+        this.dpopProofValidator = dpopProofValidator;
+    }
 
     @Override
     protected ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex, HttpHeaders headers,
@@ -229,6 +232,12 @@ public class ExceptionHandlerAdvice extends ResponseEntityExceptionHandler imple
                     : dpopProofValidator.getAllowedAlgorithms();
             if(INVALID_DPOP_PROOF.equals(errorCode) && !algs.isEmpty()) {
                 challenge.append(", algs=\"")
+                        .append(quoteAuthParam(String.join(" ", algs)))
+                        .append('"');
+            } else if(Boolean.TRUE.equals(request.getAttribute(Constants.AUTH_DPOP_REQUIRED_ATTRIBUTE)) && !algs.isEmpty()) {
+                // A bound token presented as Bearer gets a second, error-free DPoP challenge,
+                // telling the client to retry under DPoP (RFC 9449 §7.2, Figure 18).
+                challenge.append(", ").append(Constants.SCHEME_DPOP).append(" algs=\"")
                         .append(quoteAuthParam(String.join(" ", algs)))
                         .append('"');
             }

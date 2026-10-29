@@ -72,7 +72,10 @@ class AccessTokenValidationFilterTest {
         MockitoAnnotations.openMocks(this);
         request = new MockHttpServletRequest();
         response = new MockHttpServletResponse();
+        configure(filter);
+    }
 
+    private void configure(AccessTokenValidationFilter filter) {
         ReflectionTestUtils.setField(filter, "issuerUri", TEST_ISSUER);
         ReflectionTestUtils.setField(filter, "jwkSetUri", TEST_JWK_SET);
         ReflectionTestUtils.setField(filter, "allowedAudiences", Arrays.asList("test-client"));
@@ -328,6 +331,11 @@ class AccessTokenValidationFilterTest {
         verify(parsedAccessToken).setActive(false);
         assertEquals(AccessTokenValidationFilter.ERROR_TOKEN_REQUIRES_DPOP,
                 request.getAttribute(Constants.AUTH_ERROR_ATTRIBUTE));
+        // No proof took part, so the token error applies, not the proof error.
+        assertEquals(ErrorConstants.INVALID_AUTH_TOKEN,
+                request.getAttribute(Constants.AUTH_ERROR_CODE_ATTRIBUTE));
+        // and the advice is told to point the client at DPoP
+        assertEquals(Boolean.TRUE, request.getAttribute(Constants.AUTH_DPOP_REQUIRED_ATTRIBUTE));
     }
 
     @Test
@@ -344,6 +352,8 @@ class AccessTokenValidationFilterTest {
         verify(parsedAccessToken).setActive(false);
         assertEquals(AccessTokenValidationFilter.ERROR_EXPIRED_TOKEN,
                 request.getAttribute(Constants.AUTH_ERROR_ATTRIBUTE));
+        // switching to DPoP would not help, so the client is not pointed at it
+        assertNull(request.getAttribute(Constants.AUTH_DPOP_REQUIRED_ATTRIBUTE));
         verify(filterChain).doFilter(request, response);
     }
 
@@ -416,7 +426,7 @@ class AccessTokenValidationFilterTest {
         verify(parsedAccessToken).setActive(false);
         assertEquals(AccessTokenValidationFilter.ERROR_TOKEN_REQUIRES_DPOP,
                 request.getAttribute(Constants.AUTH_ERROR_ATTRIBUTE));
-        assertEquals(ErrorConstants.INVALID_DPOP_PROOF, request.getAttribute(Constants.AUTH_ERROR_CODE_ATTRIBUTE));
+        assertEquals(ErrorConstants.INVALID_AUTH_TOKEN, request.getAttribute(Constants.AUTH_ERROR_CODE_ATTRIBUTE));
         assertEquals(Constants.SCHEME_BEARER, request.getAttribute(Constants.AUTH_SCHEME_ATTRIBUTE));
         verify(filterChain).doFilter(request, response);
     }
@@ -456,8 +466,10 @@ class AccessTokenValidationFilterTest {
     }
 
     /** The validator is absent from the context when mosip.certify.dpop.enabled is false. */
+    /** The validator bean does not exist when DPoP is disabled. */
     private void disableDpop() {
-        ReflectionTestUtils.setField(filter, "dpopProofValidator", null);
+        filter = new AccessTokenValidationFilter(parsedAccessToken, null, handlerExceptionResolver);
+        configure(filter);
     }
 
     private Map<String, Object> createValidClaims() {
