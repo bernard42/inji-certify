@@ -3,6 +3,7 @@ package io.mosip.certify.dpop;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.boot.LazyInitializationBeanFactoryPostProcessor;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.core.env.MapPropertySource;
 
@@ -17,9 +18,10 @@ class DpopEnabledPropertyCheckTest {
             .withUserConfiguration(DpopEnabledPropertyCheck.class);
 
     @ParameterizedTest
-    @ValueSource(strings = {"yes", "on", "1", "ture", "", "true "})
+    @ValueSource(strings = {"yes", "on", "1", "ture", "", "true ", "#{'true'}"})
     void should_failStartup_when_dpopEnabledIsNeitherTrueNorFalse(String value) {
-        // Each of these would silently disable DPoP through the validator's string match.
+        // Each of these would silently disable DPoP through the validator's string match,
+        // including a SpEL expression, which the condition does not evaluate.
         withDpopEnabled(value)
                 .run(context -> assertThat(context).hasFailed()
                         .getFailure()
@@ -39,6 +41,18 @@ class DpopEnabledPropertyCheckTest {
     @Test
     void should_start_when_dpopEnabledIsUnset() {
         contextRunner.run(context -> assertThat(context).hasNotFailed());
+    }
+
+    @Test
+    void should_failStartup_when_lazyInitializationIsEnabledAndDpopEnabledIsInvalid() {
+        // What spring.main.lazy-initialization=true installs. The check is never injected,
+        // so it must be excluded from lazy initialization or it would never run.
+        withDpopEnabled("yes")
+                .withInitializer(context -> context.addBeanFactoryPostProcessor(new LazyInitializationBeanFactoryPostProcessor()))
+                .run(context -> assertThat(context).hasFailed()
+                        .getFailure()
+                        .rootCause()
+                        .isInstanceOf(IllegalStateException.class));
     }
 
     /**
