@@ -167,6 +167,7 @@ properties are:
 # Whether Certify offers the DPoP authentication path; true when unset. With false, Certify
 # is Bearer-only: a DPoP-scheme request gets 401 invalid_token with a Bearer challenge, a
 # DPoP-bound token presented as Bearer is still refused, and the properties below are ignored.
+# Only true or false is accepted; any other value fails startup.
 mosip.certify.dpop.enabled=true
 # Signature algorithms accepted on a proof, and advertised in the WWW-Authenticate
 # challenge. Asymmetric only; MAC and none are refused whatever is listed here.

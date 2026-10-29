@@ -47,7 +47,7 @@ The **downgrade guard** (RFC 9449 §7.2, *Compatibility with the Bearer Authenti
 
 ### Disabling DPoP
 
-`mosip.certify.dpop.enabled` declares whether the deployment offers the DPoP path at all. It defaults to `true` when unset, so an existing deployment upgrades with no change in behaviour. Set it to `false` for a deployment whose authorization server does not issue DPoP-bound tokens, and Certify becomes a Bearer-only resource server:
+`mosip.certify.dpop.enabled` declares whether the deployment offers the DPoP path at all. It defaults to `true` when unset, so an existing deployment upgrades with no change in behaviour. Only `true` or `false` is accepted, in any case; any other value, such as `yes`, `1` or a typo, stops Certify at startup rather than silently turning DPoP off. Set it to `false` for a deployment whose authorization server does not issue DPoP-bound tokens, and Certify becomes a Bearer-only resource server:
 
 | Token | Presented as | Result with DPoP disabled |
 |---|---|---|
@@ -148,7 +148,7 @@ WWW-Authenticate: DPoP error="invalid_dpop_proof", error_description="DPoP proof
 |---|---|---|
 | `mosip.certify.authn.filter-urls` | URLs on which the access-token (Bearer/DPoP) filter runs. | `{ '${server.servlet.path}/issuance/credential'}` |
 | `mosip.certify.domain.url` | Public issuer address; basis for the `htu` check (see note above). | `http://localhost:8090` |
-| `mosip.certify.dpop.enabled` | Whether the DPoP path is offered. `false` makes Certify Bearer-only and the properties below are ignored (see [Disabling DPoP](#disabling-dpop)). Defaults to `true` when unset. | `true` |
+| `mosip.certify.dpop.enabled` | Whether the DPoP path is offered. `false` makes Certify Bearer-only and the properties below are ignored (see [Disabling DPoP](#disabling-dpop)). Defaults to `true` when unset; any value other than `true` or `false` fails startup. | `true` |
 | `mosip.certify.dpop.allowed-algorithms` | Signature algorithms accepted on a DPoP proof, and advertised in the `algs` challenge parameter. Asymmetric only. | `ES256,ES384,ES512,RS256,PS256,EdDSA` |
 | `mosip.certify.dpop.proof-max-age` | How old a proof's `iat` may be, in seconds. | `60` |
 | `mosip.certify.dpop.clock-skew` | Tolerance for device clock drift, applied on both sides of the freshness window. | `10` |
