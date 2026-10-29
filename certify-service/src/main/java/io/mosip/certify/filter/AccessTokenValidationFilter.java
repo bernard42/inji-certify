@@ -157,7 +157,7 @@ public class AccessTokenValidationFilter extends OncePerRequestFilter {
         String scheme = resolveScheme(authorizationHeader);
 
         if (Constants.SCHEME_DPOP.equals(scheme) && !isDpopEnabled()) {
-            rejectDpopScheme(request, response);
+            rejectDpopSchemeWhenDisabled(request, response);
             return;
         }
 
@@ -226,7 +226,7 @@ public class AccessTokenValidationFilter extends OncePerRequestFilter {
      * error wrapper with no challenge. Every {@code mosip.certify.authn.filter-urls} entry is an
      * issuance path today, so a filter URL added outside it needs the advice extended too.
      */
-    private void rejectDpopScheme(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    private void rejectDpopSchemeWhenDisabled(HttpServletRequest request, HttpServletResponse response) throws IOException {
         log.error("DPoP authorization scheme presented, but DPoP is disabled on this deployment");
         request.setAttribute(Constants.AUTH_SCHEME_ATTRIBUTE, Constants.SCHEME_BEARER);
         request.setAttribute(Constants.AUTH_ERROR_ATTRIBUTE, ERROR_DPOP_NOT_SUPPORTED);
