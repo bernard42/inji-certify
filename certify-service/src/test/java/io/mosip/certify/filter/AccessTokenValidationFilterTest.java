@@ -18,12 +18,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.servlet.HandlerExceptionResolver;
+import org.springframework.web.servlet.ModelAndView;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -376,6 +378,8 @@ class AccessTokenValidationFilterTest {
         request.addHeader("Authorization", scheme + " " + TOKEN);
         request.addHeader("DPoP", "a.proof.jwt");
         request.setRequestURI("/api/v1/secured");
+        // What the advice's resolver returns once it has written the response.
+        when(handlerExceptionResolver.resolveException(any(), any(), any(), any())).thenReturn(new ModelAndView());
 
         filter.doFilterInternal(request, response, filterChain);
 
@@ -391,6 +395,28 @@ class AccessTokenValidationFilterTest {
         assertEquals(ErrorConstants.INVALID_AUTH_TOKEN, request.getAttribute(Constants.AUTH_ERROR_CODE_ATTRIBUTE));
         // A DPoP retry can never succeed here, so the challenge must not invite one.
         assertEquals(Constants.SCHEME_BEARER, request.getAttribute(Constants.AUTH_SCHEME_ATTRIBUTE));
+        // The resolver wrote the response, so the filter adds nothing of its own.
+        assertNull(response.getHeader(HttpHeaders.WWW_AUTHENTICATE));
+    }
+
+    @Test
+    public void should_answer401WithBearerChallenge_when_dpopIsDisabledAndNoResolverHandlesTheRejection()
+            throws ServletException, IOException {
+        // The chain is not run on this path, so a null from the resolver must not leave an empty 200.
+        disableDpop();
+        request.addHeader("Authorization", "DPoP " + TOKEN);
+        request.addHeader("DPoP", "a.proof.jwt");
+        request.setRequestURI("/api/v1/secured");
+        when(handlerExceptionResolver.resolveException(any(), any(), any(), any())).thenReturn(null);
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        verify(filterChain, never()).doFilter(any(), any());
+        assertEquals(401, response.getStatus());
+        assertEquals(AccessTokenValidationFilter.ERROR_DPOP_NOT_SUPPORTED, response.getErrorMessage());
+        assertEquals("Bearer error=\"invalid_token\", error_description=\""
+                        + AccessTokenValidationFilter.ERROR_DPOP_NOT_SUPPORTED + "\"",
+                response.getHeader(HttpHeaders.WWW_AUTHENTICATE));
     }
 
     @Test

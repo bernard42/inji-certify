@@ -12,6 +12,7 @@ import java.util.Objects;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpHeaders;
 import org.springframework.lang.Nullable;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2Error;
@@ -219,14 +220,25 @@ public class AccessTokenValidationFilter extends OncePerRequestFilter {
      * cache. The challenge is Bearer rather than the scheme the caller used, since a DPoP
      * retry can never succeed here, and the code is {@code invalid_token} because no proof
      * took part in the rejection.
+     *
+     * <p>{@code ExceptionHandlerAdvice} answers 401 with a {@code WWW-Authenticate} challenge
+     * only for paths containing {@code /issuance/}; elsewhere the same exception becomes a 200
+     * error wrapper with no challenge. Every {@code mosip.certify.authn.filter-urls} entry is an
+     * issuance path today, so a filter URL added outside it needs the advice extended too.
      */
-    private void rejectDpopScheme(HttpServletRequest request, HttpServletResponse response) {
+    private void rejectDpopScheme(HttpServletRequest request, HttpServletResponse response) throws IOException {
         log.error("DPoP authorization scheme presented, but DPoP is disabled on this deployment");
         request.setAttribute(Constants.AUTH_SCHEME_ATTRIBUTE, Constants.SCHEME_BEARER);
         request.setAttribute(Constants.AUTH_ERROR_ATTRIBUTE, ERROR_DPOP_NOT_SUPPORTED);
         request.setAttribute(Constants.AUTH_ERROR_CODE_ATTRIBUTE, ErrorConstants.INVALID_AUTH_TOKEN);
         parsedAccessToken.setActive(false);
-        handlerExceptionResolver.resolveException(request, response, null, new NotAuthenticatedException());
+        if (handlerExceptionResolver.resolveException(request, response, null, new NotAuthenticatedException()) == null) {
+            // No resolver took the exception. The chain is not run, so without this the
+            // caller would be answered an empty 200.
+            response.setHeader(HttpHeaders.WWW_AUTHENTICATE, Constants.SCHEME_BEARER
+                    + " error=\"" + ErrorConstants.INVALID_AUTH_TOKEN + "\", error_description=\"" + ERROR_DPOP_NOT_SUPPORTED + "\"");
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, ERROR_DPOP_NOT_SUPPORTED);
+        }
     }
 
     /**
