@@ -103,7 +103,7 @@ sequenceDiagram
     Validator->>Validator: cnf.jkt binding
 
     alt token not bound to the proof key
-        Validator-->>Filter: CertifyException (invalid_token)
+        Validator-->>Filter: DpopBindingException (invalid_token)
         Filter-->>W: 401 WWW-Authenticate: DPoP error="invalid_token", algs="..."
     else bound to the proof key
         Validator->>Cache: checkAndMarkJti(jkt, jti)
