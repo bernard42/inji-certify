@@ -24,11 +24,11 @@ public class Constants {
     public static final String ACTIVE = "active";
     public static final String INACTIVE = "inactive";
     public static final String DELIMITER = "::";  // delimiter is ::  its not used by url or within any context of VC name and is distinct
-    public static final String SIGNATURE_CRYPTO_SUITE = "SIGNATURE_CRYPTO_SUITE";
-    public static final String VCTYPE = "vct";
-    public static final String CONFIRMATION = "cnf";
+    public  static final String SIGNATURE_CRYPTO_SUITE = "SIGNATURE_CRYPTO_SUITE";
+    public  static final String VCTYPE = "vct";
+    public  static final String CONFIRMATION = "cnf";
     public static final String JKT = "jkt";
-    public static final String ISSUER = "iss";
+    public  static final String ISSUER = "iss";
     public static final String TYPE = "type";
 
     // mDoc specific
